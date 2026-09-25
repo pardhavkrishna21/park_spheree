@@ -1,0 +1,69 @@
+.subs-root {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.subs-header {
+  text-align: center;
+  max-width: 680px;
+  margin: 0 auto 36px;
+}
+
+.pill-tag {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.subs-header h2 { font-size: 30px; margin-top: 8px; font-weight: 800; }
+.subs-header p { color: #64748b; font-size: 15px; margin-top: 8px; }
+
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.plan-box {
+  background: white;
+  border-radius: 16px;
+  border: 2px solid var(--border);
+  padding: 30px 24px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.plan-box.featured {
+  border-color: #10b981;
+  box-shadow: 0 10px 30px rgba(16, 185, 129, 0.15);
+}
+
+.featured-badge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #10b981;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 12px;
+  border-radius: 20px;
+}
+
+.plan-cost { font-size: 34px; font-weight: 800; margin: 14px 0 18px; }
+.plan-cost span { font-size: 14px; color: #94a3b8; font-weight: 500; }
+.plan-perks { list-style: none; margin-bottom: 24px; flex: 1; }
+.plan-perks li {
+  font-size: 14px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--slate);
+}

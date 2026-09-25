@@ -1,0 +1,133 @@
+/* Captain Valet styles */
+.captain-banner {
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+  color: white;
+  border-radius: 20px;
+  padding: 36px 30px;
+  margin-bottom: 28px;
+}
+
+.upcoming-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #4338ca;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.captain-banner h2 { font-size: 32px; font-weight: 800; margin-bottom: 12px; }
+.captain-banner p { font-size: 15px; color: #c7d2fe; max-width: 740px; }
+
+.valet-interactive-box {
+  background: white;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  padding: 24px;
+}
+
+.valet-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 14px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.badge-preview {
+  font-size: 11px;
+  background: #fef3c7;
+  color: #92400e;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 12px;
+}
+
+.sim-steps-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin: 18px 0;
+}
+
+.step-card {
+  padding: 12px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+}
+
+.step-card.active {
+  background: #ecfdf5;
+  border-color: #10b981;
+}
+
+.step-card strong { font-size: 12px; color: #047857; }
+.step-card p { font-size: 11px; color: #475569; margin-top: 2px; }
+
+.sim-screen-monitor {
+  background: #0f172a;
+  color: white;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.step-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #34d399;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.audit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.audit-grid div {
+  background: #1e293b;
+  color: #34d399;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+  font-size: 12px;
+}
+
+.tracking-bar {
+  height: 8px;
+  background: #334155;
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 14px 0;
+}
+
+.tracking-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #059669);
+  transition: width 0.4s ease;
+}
+
+.transit-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #cbd5e1;
+}
+
+.alert-box {
+  margin-top: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 14px;
+}

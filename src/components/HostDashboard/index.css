@@ -1,0 +1,95 @@
+/* Host Dashboard styles */
+.dash-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.confidential-tag {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.kpi-card {
+  background: white;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  padding: 20px;
+  box-shadow: var(--shadow);
+}
+
+.kpi-card.emerald { border-left: 4px solid #10b981; }
+.kpi-card.blue { border-left: 4px solid #3b82f6; }
+.kpi-card.amber { border-left: 4px solid #f59e0b; }
+
+.kpi-value {
+  font-size: 28px;
+  font-weight: 900;
+  margin: 6px 0;
+}
+
+.ledger-table-wrap {
+  background: white;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.ledger-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+
+.ledger-table th {
+  background: #f8fafc;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ledger-table td {
+  padding: 14px 18px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.plate-pill {
+  background: #f1f5f9;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-weight: 700;
+}
+
+.status-pill {
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 12px;
+}
+
+.restricted-box {
+  text-align: center;
+  max-width: 500px;
+  margin: 60px auto;
+  background: white;
+  padding: 40px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+}

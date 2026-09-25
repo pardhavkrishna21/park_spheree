@@ -1,0 +1,42 @@
+.bookings-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.pass-card {
+  border: 2px dashed #10b981;
+  background: #f0fdf4;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.pass-top {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px dashed #10b981;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+}
+
+.status-badge {
+  background: #10b981;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.otp-block {
+  text-align: right;
+}
+
+.otp-block span { font-size: 11px; color: var(--muted); }
+.otp-block strong { display: block; font-size: 26px; color: #047857; letter-spacing: 2px; }
+
+.pass-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  font-size: 13px;
+}
