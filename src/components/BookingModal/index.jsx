@@ -7,6 +7,13 @@ export default function BookingModal({ spot, selectedVehicle, bookingHours, user
 
   if (!spot) return null;
 
+  const chargingVehicles = spot.amenities.evChargingVehicles || ['Car', 'Bike'];
+  const chargingType = selectedVehicle === 'Bike' ? 'Bike' : 'Car';
+  const canChargeSelectedVehicle = spot.amenities.evCharging && chargingVehicles.includes(chargingType);
+  const canWashSelectedVehicle = selectedVehicle === 'Bike'
+    ? (spot.amenities.bikeWash ?? spot.amenities.carWash)
+    : (spot.amenities.carWash ?? spot.amenities.bikeWash);
+
   const baseRate = selectedVehicle === 'Bike' ? 30 : 50;
   const platRate = selectedVehicle === 'Bike' ? 10 : 20;
 
@@ -36,16 +43,17 @@ export default function BookingModal({ spot, selectedVehicle, bookingHours, user
           </div>
 
           <div className="addon-options">
-            {spot.amenities.evCharging && (
+            {canChargeSelectedVehicle && (
               <label>
                 <input type="checkbox" checked={needEV} onChange={(e) => setNeedEV(e.target.checked)} />
-                ⚡ EV Fast Charging (+₹50)
+                ⚡ EV charging add-on (+₹50)
+                {spot.amenities.evChargerType && <small className="addon-detail">{spot.amenities.evChargerType} · check your vehicle connector before booking</small>}
               </label>
             )}
-            {spot.amenities.carWash && (
+            {canWashSelectedVehicle && (
               <label>
                 <input type="checkbox" checked={needWash} onChange={(e) => setNeedWash(e.target.checked)} />
-                ✨ Water Polish Wash (+₹{selectedVehicle === 'Bike' ? 60 : 120})
+                ✨ {selectedVehicle === 'Bike' ? 'Bike' : 'Car'} wash (+₹{selectedVehicle === 'Bike' ? 60 : 120})
               </label>
             )}
           </div>

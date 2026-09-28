@@ -72,6 +72,24 @@ export default function Subscriptions({ user, setUser, showToast }) {
           </button>
         </div>
       </div>
+
+      <section className="subscription-guide" aria-label="How memberships work">
+        <h3>How to use your membership</h3>
+        <div className="subscription-guide-grid">
+          <div>
+            <strong>Choose for your routine</strong>
+            <p>Occasional drivers can stay on Free. Regular drivers can compare monthly perks against how often they park.</p>
+          </div>
+          <div>
+            <strong>Book as usual</strong>
+            <p>Find an available spot and complete your booking. Membership benefits apply to eligible services and bookings.</p>
+          </div>
+          <div>
+            <strong>Keep track of your plan</strong>
+            <p>Your active plan appears in your account. Check the included monthly allowances before using a wash or charging session.</p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

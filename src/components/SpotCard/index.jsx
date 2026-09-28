@@ -6,6 +6,9 @@ export default function SpotCard({ spot, selectedVehicle, onBook }) {
   const platformHourlyFee = selectedVehicle === 'Bike' ? 10 : 20;
   const baseRate = selectedVehicle === 'Bike' ? spot.basePriceBike : spot.basePriceCar;
   const totalHourly = baseRate + platformHourlyFee;
+  const evVehicles = spot.amenities.evChargingVehicles || ['Car', 'Bike'];
+  const washForCar = spot.amenities.carWash;
+  const washForBike = spot.amenities.bikeWash ?? spot.amenities.carWash;
 
   return (
     <article className="spot-card">
@@ -25,13 +28,23 @@ export default function SpotCard({ spot, selectedVehicle, onBook }) {
 
         <div className="tags-container">
           <span className="amenity-chip">🏢 {spot.hostType}</span>
-          {spot.amenities.evCharging && <span className="amenity-chip ev">⚡ EV Socket</span>}
-          {spot.amenities.carWash && <span className="amenity-chip wash">✨ Wash Station</span>}
+          {spot.amenities.evCharging && (
+            <span className="amenity-chip ev">
+              ⚡ {spot.amenities.evChargerType || 'EV charging'} · {evVehicles.map((type) => type === 'Bike' ? 'e-bikes' : 'e-cars').join(', ')}
+            </span>
+          )}
+          {washForCar && <span className="amenity-chip wash">✨ Car wash</span>}
+          {washForBike && <span className="amenity-chip wash">✨ Bike wash</span>}
+          {spot.amenities.basicService && <span className="amenity-chip service">🛠 Basic servicing</span>}
           {spot.amenities.cctv && <span className="amenity-chip">🛡️ 24/7 CCTV</span>}
         </div>
 
+        {spot.amenities.serviceDetails && (
+          <p className="spot-service-note">Vehicle care: {spot.amenities.serviceDetails}</p>
+        )}
+
         <div className="capacity-note">
-          <strong>Capacity:</strong> Max {spot.maxCarCapacity || 2} Cars, {spot.maxBikeCapacity || 2} Bikes • Verified Bay
+          <strong>Capacity:</strong> Max {spot.maxCarCapacity ?? 2} Cars, {spot.maxBikeCapacity ?? 2} Bikes • Verified Bay
         </div>
 
         <div className="spot-card-footer">

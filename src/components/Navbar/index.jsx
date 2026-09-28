@@ -21,7 +21,8 @@ export default function Navbar({ currentTab, setCurrentTab, user, bookingCount }
             <>
               <li>
                 <button
-                  className={`nav-link-btn ${currentTab === 'host-listings' ? 'active' : ''}`}
+                  className={`nav-link-btn host-listings-tab ${currentTab === 'host-listings' ? 'active' : ''}`}
+                  aria-current={currentTab === 'host-listings' ? 'page' : undefined}
                   onClick={() => setCurrentTab('host-listings')}
                 >
                   ➕ Make Spot Available
@@ -30,6 +31,7 @@ export default function Navbar({ currentTab, setCurrentTab, user, bookingCount }
               <li>
                 <button
                   className={`nav-link-btn host-revenue-tab ${currentTab === 'host-dashboard' ? 'active' : ''}`}
+                  aria-current={currentTab === 'host-dashboard' ? 'page' : undefined}
                   onClick={() => setCurrentTab('host-dashboard')}
                 >
                   💰 Revenue Generated
@@ -77,7 +79,8 @@ export default function Navbar({ currentTab, setCurrentTab, user, bookingCount }
 
           <li>
             <button
-              className="nav-link-btn profile-tag-btn"
+              className={`nav-link-btn profile-tag-btn ${currentTab === 'auth' ? 'active' : ''}`}
+              aria-current={currentTab === 'auth' ? 'page' : undefined}
               onClick={() => setCurrentTab('auth')}
             >
               👤 {user.name.split(' ')[0]} <span className="role-pill">{user.role}</span>

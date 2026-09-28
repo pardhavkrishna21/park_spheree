@@ -95,6 +95,14 @@
 
 .amenity-chip.ev { background-color: #fef3c7; color: #92400e; }
 .amenity-chip.wash { background-color: #e0f2fe; color: #0369a1; }
+.amenity-chip.service { background-color: #ecfdf5; color: #047857; }
+
+.spot-service-note {
+  margin: -5px 0 12px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
 
 .capacity-note {
   font-size: 12px;

@@ -71,6 +71,279 @@
 .step-card strong { font-size: 12px; color: #047857; }
 .step-card p { font-size: 11px; color: #475569; margin-top: 2px; }
 
+.valet-supporting {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+
+.valet-supporting-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+.valet-supporting h3,
+.valet-benefits h3 {
+  margin: 5px 0 6px;
+  color: var(--dark);
+  font-size: 21px;
+  line-height: 1.3;
+}
+
+.valet-supporting-kicker {
+  color: #047857;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.valet-supporting-intro {
+  max-width: 760px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.valet-preview-status {
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  border: 1px solid #f5d78e;
+  border-radius: 6px;
+  background: #fff8e6;
+  color: #8a5a00;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.valet-road-map {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(220px, auto));
+  gap: 36px 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  isolation: isolate;
+}
+
+.valet-road-map::before,
+.valet-road-map::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  left: 16.666%;
+  right: calc(16.666% - 7px);
+  top: 15px;
+  bottom: calc(50% - 47px);
+  border-top: 14px solid #dce5e8;
+  border-right: 14px solid #dce5e8;
+  border-bottom: 14px solid #dce5e8;
+  border-radius: 0 38px 38px 0;
+}
+
+.valet-road-map::after {
+  left: calc(16.666% + 6px);
+  right: calc(16.666% - 1px);
+  top: 21px;
+  bottom: calc(50% - 41px);
+  border-width: 2px;
+  border-style: dashed;
+  border-color: #fff;
+}
+
+.valet-workflow-step {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  padding: 0 18px 12px;
+  list-style: none;
+  transition: transform 180ms ease;
+}
+
+.road-step-1 { grid-column: 1; grid-row: 1; }
+.road-step-2 { grid-column: 2; grid-row: 1; }
+.road-step-3 { grid-column: 3; grid-row: 1; }
+.road-step-4 { grid-column: 3; grid-row: 2; }
+.road-step-5 { grid-column: 2; grid-row: 2; }
+.road-step-6 { grid-column: 1; grid-row: 2; }
+
+.valet-workflow-button {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.valet-workflow-button:focus-visible {
+  outline: 3px solid #0284c7;
+  outline-offset: 4px;
+  border-radius: 11px;
+}
+
+.valet-workflow-marker {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 10px;
+  border: 2px solid #aab8be;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 5px #fff;
+  color: #52636b;
+  font-size: 12px;
+  font-weight: 800;
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+}
+
+.valet-workflow-copy {
+  display: block;
+  min-height: 148px;
+  padding: 13px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.96);
+  transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.valet-workflow-step.active {
+  transform: translateY(-3px);
+}
+
+.valet-workflow-step.active .valet-workflow-marker {
+  transform: scale(1.12);
+  border-color: #059669;
+  background: #059669;
+  box-shadow: 0 0 0 5px #d1fae5, 0 0 0 9px rgba(16, 185, 129, 0.14);
+  color: #fff;
+}
+
+.valet-workflow-step.active .valet-workflow-copy {
+  border-color: #10b981;
+  background: #ecfdf5;
+  box-shadow: 0 10px 24px rgba(5, 150, 105, 0.12);
+}
+
+.valet-workflow-step.upcoming .valet-workflow-button:hover .valet-workflow-copy {
+  border-color: #10b981;
+  background: #f7fefa;
+}
+
+.valet-workflow-step.upcoming .valet-workflow-button:hover .valet-workflow-marker {
+  border-color: #10b981;
+  color: #047857;
+}
+
+.valet-workflow-step.complete .valet-workflow-marker {
+  border-color: #10b981;
+  background: #d1fae5;
+  color: #047857;
+}
+
+.valet-workflow-label {
+  color: #047857;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.valet-workflow-title {
+  display: block;
+  margin: 5px 0;
+  color: var(--dark);
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.4;
+}
+
+.valet-workflow-description {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.valet-otp-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 13px 15px;
+  border-left: 3px solid #10b981;
+  background: #ecfdf5;
+  color: #334155;
+}
+
+.valet-otp-note svg {
+  flex: 0 0 auto;
+  color: #047857;
+}
+
+.valet-otp-note p {
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.valet-benefits {
+  margin-top: 30px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+
+.valet-benefit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.valet-benefit-group {
+  padding: 18px 22px 18px 0;
+}
+
+.valet-benefit-group + .valet-benefit-group {
+  padding-left: 22px;
+  border-left: 1px solid var(--border);
+}
+
+.valet-benefit-group h4 {
+  margin-bottom: 10px;
+  color: #047857;
+  font-size: 14px;
+}
+
+.valet-benefit-group ul {
+  display: grid;
+  gap: 10px;
+  padding-left: 18px;
+  color: var(--muted);
+}
+
+.valet-benefit-group li {
+  padding-left: 2px;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.valet-benefit-group li strong {
+  color: var(--slate);
+}
+
 .sim-screen-monitor {
   background: #0f172a;
   color: white;
@@ -130,4 +403,89 @@
   background: rgba(255, 255, 255, 0.08);
   border-radius: 10px;
   padding: 14px;
+}
+
+@media (max-width: 700px) {
+  .valet-supporting-heading {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .valet-road-map {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    gap: 12px;
+    padding: 0;
+  }
+
+  .valet-road-map::before,
+  .valet-road-map::after {
+    left: 15px;
+    right: auto;
+    top: 20px;
+    bottom: 20px;
+    width: 0;
+    border-top: 0;
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 14px solid #dce5e8;
+    border-radius: 0;
+  }
+
+  .valet-road-map::after {
+    left: 21px;
+    right: auto;
+    top: 26px;
+    bottom: 26px;
+    border-width: 2px;
+    border-style: dashed;
+    border-color: #fff;
+  }
+
+  .valet-workflow-step,
+  .road-step-1,
+  .road-step-2,
+  .road-step-3,
+  .road-step-4,
+  .road-step-5,
+  .road-step-6 {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+    grid-column: auto;
+    grid-row: auto;
+    align-items: start;
+    gap: 12px;
+    padding: 0;
+  }
+
+  .valet-workflow-marker {
+    grid-column: 1;
+    grid-row: 1;
+    width: 40px;
+    height: 40px;
+    margin: 0;
+  }
+
+  .valet-workflow-copy {
+    grid-column: 2;
+    grid-row: 1;
+    min-height: 0;
+    padding: 12px;
+  }
+
+  .valet-benefit-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .valet-benefit-group,
+  .valet-benefit-group + .valet-benefit-group {
+    padding: 0;
+  }
+
+  .valet-benefit-group + .valet-benefit-group {
+    padding-top: 14px;
+    padding-bottom: 16px;
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
 }

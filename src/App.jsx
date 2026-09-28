@@ -71,6 +71,11 @@ export default function App() {
     setUserBookings([newBooking, ...userBookings]);
 
     // Push into host telemetry
+    const hostRate = selectedVehicle === 'Bike' ? 30 : 50;
+    const parkingEarning = hostRate * bookingHours;
+    const evChargingEarning = needEV ? 50 : 0;
+    const washEarning = needWash ? (selectedVehicle === 'Bike' ? 60 : 120) : 0;
+
     setHostBookings([
       {
         id: `HB-${Math.floor(100 + Math.random() * 900)}`,
@@ -78,11 +83,17 @@ export default function App() {
         vehiclePlate: user.vehiclePlate || 'TS 09 NEW',
         vehicleType: selectedVehicle,
         driverName: user.name,
+        driverEmail: user.email,
         hoursBooked: bookingHours,
-        rateApplied: selectedVehicle === 'Bike' ? 30 : 50,
-        hostEarning: (selectedVehicle === 'Bike' ? 30 : 50) * bookingHours,
+        rateApplied: hostRate,
+        parkingEarning,
+        evCharging: needEV,
+        evChargerType: needEV ? bookingModalSpot.amenities.evChargerType : '',
+        evChargingEarning,
+        washEarning,
+        hostEarning: parkingEarning + evChargingEarning + washEarning,
         status: 'Active (Parked Now)',
-        timestamp: 'Just Now'
+        timestamp: new Date().toISOString()
       },
       ...hostBookings
     ]);

@@ -51,6 +51,24 @@
   margin-bottom: 14px;
 }
 
+.addon-options label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.addon-options input {
+  accent-color: #059669;
+}
+
+.addon-detail {
+  width: 100%;
+  margin-left: 24px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .price-lines div {
   display: flex;
   justify-content: space-between;
