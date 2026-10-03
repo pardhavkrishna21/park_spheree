@@ -40,3 +40,32 @@
   gap: 12px;
   font-size: 13px;
 }
+
+.booking-status-note { margin-top: 11px; padding: 10px 12px; border-radius: 9px; font-size: 13px; }
+.booking-status-note.awaiting { border: 1px solid #fde68a; background: #fffbeb; color: #92400e; }
+.booking-status-note.parked { border: 1px solid #bfdbfe; background: #eff6ff; color: #1d4ed8; }
+.booking-status-note.missed { border: 1px solid #fecaca; background: #fef2f2; color: #b91c1c; }
+
+.booking-time-editor { display: grid; grid-template-columns: repeat(2, minmax(140px, 1fr)); gap: 10px; padding: 12px; border: 1px solid #bfdbfe; border-radius: 11px; background: #eff6ff; }
+.booking-time-editor label { display: flex; flex-direction: column; gap: 5px; color: #1e3a8a; font-size: 12px; font-weight: 700; }
+.booking-time-editor input, .booking-time-editor select { width: 100%; padding: 9px 10px; border: 1px solid #93c5fd; border-radius: 8px; background: #fff; color: #0f172a; font: inherit; }
+.booking-availability { grid-column: 1 / -1; padding: 8px 10px; border-radius: 8px; font-size: 12px; font-weight: 700; }
+.booking-availability.available { background: #dcfce7; color: #166534; }
+.booking-availability.unavailable { background: #fee2e2; color: #b91c1c; }
+
+.booking-cancel-form,
+.booking-feedback-form { margin-top: 12px; padding: 14px; border-radius: 12px; display: flex; flex-direction: column; gap: 9px; }
+.booking-cancel-form { border: 1px solid #fecaca; background: #fff7f7; color: #7f1d1d; }
+.booking-feedback-form { border: 1px solid #bfdbfe; background: #f0f9ff; color: #1e3a8a; }
+.booking-cancel-form p { margin: 0; font-size: 13px; color: #7f1d1d; }
+.booking-cancel-form textarea,
+.booking-feedback-form textarea { width: 100%; resize: vertical; padding: 10px 11px; border: 1px solid #cbd5e1; border-radius: 9px; background: #fff; color: #1e293b; font: inherit; font-size: 13px; }
+.booking-cancel-form textarea:focus,
+.booking-feedback-form textarea:focus { outline: 2px solid #93c5fd; border-color: #2563eb; }
+.booking-feedback-open { margin-top: 11px; padding: 9px 12px; border: 1px solid #93c5fd; border-radius: 9px; background: #eff6ff; color: #1d4ed8; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.booking-feedback-done { margin-top: 10px; padding: 9px 12px; border-radius: 9px; background: #ecfdf5; color: #047857; font-size: 13px; font-weight: 700; }
+.booking-feedback-stars { display: flex; gap: 4px; }
+.booking-feedback-stars button { padding: 0; border: 0; background: transparent; color: #cbd5e1; font-size: 27px; line-height: 1; cursor: pointer; }
+.booking-feedback-stars button.on { color: #f59e0b; }
+.booking-feedback-cancel { margin-left: 8px; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #475569; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+@media (max-width: 480px) { .booking-time-editor { grid-template-columns: 1fr; } }

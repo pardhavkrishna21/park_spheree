@@ -142,3 +142,21 @@
   padding: 1px 6px;
   font-size: 11px;
 }
+.pm-card { position: absolute; right: 0; top: 58px; width: 300px; padding: 16px; background: #fff; border: 1px solid #e2e8f0; border-radius: 20px; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2); z-index: 50; text-align: left; }
+.pm-head { display: flex; align-items: center; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid #f1f5f9; }
+.pm-avatar { width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%; display: grid; place-items: center; background: #d6d3d1; border: 3px solid #d6d3d1; }
+.pm-id { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pm-id strong { font-size: 15px; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pm-id small { font-size: 12px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pm-plan { padding: 3px 10px; border-radius: 999px; color: #fff; font-size: 11px; font-weight: 800; }
+.pm-stats { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; padding: 14px 0; }
+.pm-stats div { display: flex; flex-direction: column; align-items: center; padding: 8px 4px; border-radius: 12px; background: #f8fafc; }
+.pm-stats strong { font-size: 16px; color: #0f172a; }
+.pm-stats span { font-size: 11px; color: #64748b; }
+.pm-menu { display: flex; flex-direction: column; gap: 2px; padding-top: 8px; border-top: 1px solid #f1f5f9; }
+.pm-menu button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 8px; border: 0; border-radius: 10px; background: none; font: inherit; font-size: 14px; font-weight: 600; color: #0f172a; cursor: pointer; text-align: left; transition: background 0.12s ease; }
+.pm-menu button span { width: 24px; text-align: center; }
+.pm-menu button i { margin-left: auto; font-style: normal; color: #94a3b8; font-size: 18px; }
+.pm-menu button:hover { background: #f1f5f9; }
+.pm-menu button.danger { color: #dc2626; }
+.pm-menu button.danger:hover { background: #fef2f2; }

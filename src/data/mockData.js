@@ -6,6 +6,13 @@ const sampleBookingTimestamp = (monthsAgo, day, hour) => {
   return date.toISOString();
 };
 
+const daysAgoAt = (days, hour) => {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  d.setHours(hour, 30, 0, 0);
+  return d.toISOString();
+};
+
 export const INITIAL_PARKING_SPOTS = [
   {
     id: 'spot-101',
@@ -280,7 +287,7 @@ export const INITIAL_PARKING_SPOTS = [
   }
 ];
 
-export const INITIAL_HOST_BOOKINGS = [
+const RAW_HOST_BOOKINGS = [
   {
     id: 'HB-901',
     spotName: 'Nexus Mall Safe Garage Spot',
@@ -292,8 +299,8 @@ export const INITIAL_HOST_BOOKINGS = [
     rateApplied: 50,
     parkingEarning: 150,
     hostEarning: 150,
-    status: 'Active (Parked Now)',
-    timestamp: sampleBookingTimestamp(0, 18, 14)
+    status: 'Completed',
+    timestamp: daysAgoAt(2, 14)
   },
   {
     id: 'HB-902',
@@ -494,5 +501,57 @@ export const INITIAL_HOST_BOOKINGS = [
     hostEarning: 100,
     status: 'Completed',
     timestamp: sampleBookingTimestamp(11, 12, 10)
+  },
+  {
+    id: 'HB-915',
+    spotName: 'Nexus Mall Safe Garage Spot',
+    vehiclePlate: 'TS 06 AA 1209',
+    vehicleType: 'Bike',
+    driverName: 'Sana Qureshi',
+    driverEmail: 'sana@example.com',
+    hoursBooked: 2,
+    rateApplied: 30,
+    parkingEarning: 60,
+    hostEarning: 60,
+    status: 'Completed',
+    timestamp: daysAgoAt(5, 10)
+  },
+  {
+    id: 'HB-916',
+    spotName: 'Nexus Mall Safe Garage Spot',
+    vehiclePlate: 'TS 09 BB 4410',
+    vehicleType: 'Car',
+    driverName: 'Vivek Pillai',
+    driverEmail: 'vivek@example.com',
+    hoursBooked: 2,
+    rateApplied: 50,
+    parkingEarning: 100,
+    hostEarning: 100,
+    status: 'Completed',
+    timestamp: daysAgoAt(4, 18)
+  },
+  {
+    id: 'HB-917',
+    spotName: 'Nexus Mall Safe Garage Spot',
+    vehiclePlate: 'TS 08 CC 7731',
+    vehicleType: 'EV',
+    driverName: 'Lakshmi Rao',
+    driverEmail: 'lakshmi@example.com',
+    hoursBooked: 3,
+    rateApplied: 50,
+    parkingEarning: 150,
+    evCharging: true,
+    evChargerType: 'Type 2 AC',
+    evChargingEarning: 50,
+    hostEarning: 200,
+    status: 'Completed',
+    timestamp: daysAgoAt(1, 9)
   }
 ];
+
+// Every booking is a time slot: it starts at `startAt` and ends after the booked hours.
+export const INITIAL_HOST_BOOKINGS = RAW_HOST_BOOKINGS.map((b) => ({
+  ...b,
+  startAt: b.timestamp,
+  endAt: new Date(new Date(b.timestamp).getTime() + b.hoursBooked * 3600000).toISOString()
+}));

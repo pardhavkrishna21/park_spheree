@@ -39,6 +39,14 @@ export default function HostListings({ user, spots, setSpots, hostSpots, setHost
   const weeklyBars = [0.6, 0.75, 0.7, 0.85, 1, 0.95, 0.8];
   const weekDays = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
+  const checklist = [
+    { label: 'Space name and landmark', done: Boolean(title.trim() && nearLandmark.trim()) },
+    { label: 'Address added', done: Boolean(address.trim()) },
+    { label: 'Capacity set', done: Number(maxCars) + Number(maxBikes) > 0 },
+    { label: 'Ownership proof', done: Boolean(ownerLegalName.trim() && docProofName.trim()) }
+  ];
+  const completion = Math.round((checklist.filter((c) => c.done).length / checklist.length) * 100);
+
   const toggleEVVehicle = (vehicleType) => {
     setEvChargingVehicles((current) => current.includes(vehicleType)
       ? current.filter((type) => type !== vehicleType)
@@ -107,16 +115,33 @@ export default function HostListings({ user, spots, setSpots, hostSpots, setHost
 
   return (
     <div className="host-listings-root">
-      <div className="host-header-bar">
-        <div>
-          <span className="badge-host">SPACE HOST CONSOLE</span>
-          <h2>Make Your Spot Available for Drivers</h2>
-          <p>Provide space capacity, photos, and legal proof. Guaranteed fixed rates: <strong>₹50/hr (Car)</strong> & <strong>₹30/hr (Bike)</strong>.</p>
+      <section className="hl-hero">
+        <div className="hl-hero-text">
+          <span className="hl-pill">SPACE HOST CONSOLE</span>
+          <h2>Turn your empty space into <span>steady income</span></h2>
+          <p>Provide capacity, photos and legal proof. Guaranteed fixed rates: <strong>₹50/hr (Car)</strong> &amp; <strong>₹30/hr (Bike)</strong>.</p>
+          <div className="hl-hero-actions">
+            <button className="hl-cta" onClick={() => setCurrentTab('host-dashboard')}>View Revenue Generated →</button>
+            <span className="hl-count">{hostSpots.length} {hostSpots.length === 1 ? 'bay' : 'bays'} listed</span>
+          </div>
         </div>
-        <button className="btn-primary" onClick={() => setCurrentTab('host-dashboard')}>
-          View Revenue Generated →
-        </button>
-      </div>
+
+        <div className="hl-hero-side">
+          <div className="hl-lot" aria-hidden="true">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className={`hl-bay b${i}`}><span>{['🚗', '🏍️', '🚙', '⚡'][i]}</span></div>
+            ))}
+          </div>
+          <div className="hl-progress">
+            <div className="hl-ring" style={{ '--pct': `${completion}%` }}><strong>{completion}%</strong></div>
+            <ul>
+              {checklist.map((c) => (
+                <li key={c.label} className={c.done ? 'done' : ''}><i>{c.done ? '✓' : ''}</i>{c.label}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
 
       <div className="host-split">
         <form className="host-form" onSubmit={handleSubmit}>
@@ -335,11 +360,11 @@ export default function HostListings({ user, spots, setSpots, hostSpots, setHost
       <section className="host-guide valet-guide">
         <div className="host-guide-heading valet-guide-heading">
           <div>
-            <span className="host-guide-kicker">A FUTURE PARKSPHERE SERVICE</span>
-            <h3>How Captain valet parking will work</h3>
-            <p>A vetted Captain can collect a booked vehicle, drive it to its reserved bay, and confirm safe parking.</p>
+            <span className="host-guide-kicker">A PARKSPHERE SERVICE</span>
+            <h3>How Captain valet parking works</h3>
+            <p>A vetted Captain collects a booked vehicle, drives it to its reserved bay, and confirms safe parking.</p>
           </div>
-          <span className="valet-upcoming-label">UPCOMING</span>
+          <span className="valet-upcoming-label">SERVICE AVAILABLE</span>
         </div>
 
         <div className="valet-flow">
@@ -359,7 +384,7 @@ export default function HostListings({ user, spots, setSpots, hostSpots, setHost
             <span className="valet-step-icon"><IconMapPin size={19} /></span>
             <span className="valet-step-number">STEP 3</span>
             <h4>Drive to the reserved bay</h4>
-            <p>The driver can follow the trip while the Captain navigates to the booked parking space.</p>
+            <p>The driver follows the trip while the Captain navigates to the booked parking space.</p>
           </div>
           <div className="valet-step">
             <span className="valet-step-icon"><IconClock size={19} /></span>

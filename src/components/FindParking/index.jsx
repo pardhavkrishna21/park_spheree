@@ -2,9 +2,16 @@ import React, { useEffect, useMemo, useState } from 'react';
 import SpotCard from '../SpotCard';
 import { IconMapPin, IconCar, IconClock, IconZap, IconSparkles, IconShield } from '../Icons';
 import './index.css';
+import { getAvailability } from '../../utils/availability';
+import DateTimePicker from '../DateTimePicker';
 
 export default function FindParking({
   spots,
+  userBookings = [],
+  searchDate,
+  setSearchDate,
+  searchTime,
+  setSearchTime,
   searchQuery,
   setSearchQuery,
   selectedVehicle,
@@ -112,6 +119,8 @@ export default function FindParking({
             </div>
           </div>
 
+          <DateTimePicker date={searchDate} time={searchTime} duration={bookingHours} onDateChange={setSearchDate} onTimeChange={setSearchTime} />
+
           <div className="filter-chips">
             <span className="filter-title">Filter Add-ons:</span>
             <button className={`chip-btn ${filterEV ? 'active' : ''}`} onClick={() => setFilterEV(!filterEV)}>
@@ -138,6 +147,7 @@ export default function FindParking({
             key={spot.id}
             spot={spot}
             selectedVehicle={selectedVehicle}
+            availability={getAvailability(spot, searchDate, searchTime, bookingHours, userBookings)}
             onBook={onBookSpot}
           />
         ))}

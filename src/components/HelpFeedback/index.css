@@ -1,0 +1,46 @@
+.hf-root { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+.hf-hero { padding: 30px; border-radius: 26px; color: #fff; background: radial-gradient(circle at 85% 10%, #10b981 0, transparent 45%), linear-gradient(135deg, #0f172a, #1e3a8a); box-shadow: 0 22px 46px rgba(30, 58, 138, 0.3); }
+.hf-pill { display: inline-block; padding: 5px 14px; border-radius: 999px; background: rgba(255, 255, 255, 0.14); font-size: 11px; font-weight: 800; letter-spacing: 0.7px; }
+.hf-hero h2 { margin: 10px 0 4px; font-size: 32px; color: #fff; }
+.hf-hero p { margin: 0 0 16px; opacity: 0.85; color: #e2e8f0; }
+.hf-search { width: 100%; max-width: 520px; padding: 13px 18px; border: 0; border-radius: 999px; font: inherit; background: #fff; }
+.hf-search:focus { outline: 3px solid rgba(16, 185, 129, 0.5); }
+
+.hf-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; align-items: start; }
+.hf-card { padding: 22px; border-radius: 22px; background: #fff; border: 1px solid #e2e8f0; box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06); }
+.hf-card h3 { margin: 0 0 12px; }
+.hf-muted { color: #64748b; font-size: 13px; margin: 0 0 14px; }
+
+.hf-faq { border: 1px solid #e2e8f0; border-radius: 14px; margin-bottom: 8px; overflow: hidden; transition: border-color 0.15s ease; }
+.hf-faq.open { border-color: #10b981; background: #f0fdf4; }
+.hf-faq button { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; padding: 13px 16px; border: 0; background: none; font: inherit; font-weight: 700; font-size: 14px; text-align: left; cursor: pointer; color: #0f172a; }
+.hf-faq button i { font-style: normal; font-size: 20px; color: #059669; }
+.hf-faq p { margin: 0; padding: 0 16px 14px; font-size: 13px; color: #475569; line-height: 1.6; }
+.hf-contact { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 14px; padding: 12px 16px; border-radius: 14px; background: #eff6ff; font-size: 13px; }
+.hf-contact a { color: #2563eb; font-weight: 700; }
+
+.hf-fb-head { display: flex; justify-content: space-between; align-items: flex-start; }
+.hf-avg { text-align: right; }
+.hf-avg strong { display: block; font-size: 22px; color: #f59e0b; }
+.hf-avg span { font-size: 12px; color: #64748b; }
+.hf-locked { padding: 14px 16px; border-radius: 14px; background: #f8fafc; border: 1.5px dashed #cbd5e1; color: #475569; font-size: 13px; margin-bottom: 14px; }
+.hf-form { display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: 16px; background: #ecfdf5; border: 1px solid #a7f3d0; margin-bottom: 16px; }
+.hf-form select, .hf-form textarea { padding: 10px 12px; border: 1.5px solid #a7f3d0; border-radius: 10px; font: inherit; background: #fff; }
+.hf-form select:focus, .hf-form textarea:focus { outline: none; border-color: #059669; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25); }
+.hf-stars { display: flex; gap: 4px; }
+.hf-stars button { border: 0; background: none; font-size: 28px; color: #d1d5db; cursor: pointer; transition: transform 0.12s ease; }
+.hf-stars button.on { color: #f59e0b; }
+.hf-stars button:hover { transform: scale(1.15); }
+.hf-submit { padding: 11px; border: 0; border-radius: 12px; background: linear-gradient(135deg, #059669, #10b981); color: #fff; font: inherit; font-weight: 800; cursor: pointer; }
+.hf-submit:disabled { background: #cbd5e1; cursor: not-allowed; }
+
+.hf-reviews { display: flex; flex-direction: column; gap: 12px; }
+.hf-review { padding: 14px 16px; border-radius: 16px; border: 1px solid #e2e8f0; background: #fff; }
+.hf-review-top { display: flex; align-items: center; gap: 10px; }
+.hf-review-top > div { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.hf-review-top small { color: #64748b; font-size: 12px; }
+.hf-initial { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; color: #fff; background: linear-gradient(135deg, #6366f1, #10b981); }
+.hf-rate { color: #f59e0b; letter-spacing: 1px; white-space: nowrap; }
+.hf-rate em { font-style: normal; color: #d1d5db; }
+.hf-review p { margin: 10px 0 8px; font-size: 14px; color: #334155; }
+.hf-verified { display: inline-block; padding: 2px 10px; border-radius: 999px; background: #dcfce7; color: #166534; font-size: 11px; font-weight: 700; }

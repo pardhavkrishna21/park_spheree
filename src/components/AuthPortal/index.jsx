@@ -4,6 +4,7 @@ import './index.css';
 
 export default function AuthPortal({
   user,
+  profiles,
   setUser,
   setCurrentTab,
   showToast
@@ -30,7 +31,7 @@ export default function AuthPortal({
   );
 
   const [vehiclePlate, setVehiclePlate] = useState(
-    user?.vehiclePlate || 'TS 09 EZ 4088'
+    user?.vehiclePlate || ''
   );
 
   const handleRoleChange = (newRole) => {
@@ -38,18 +39,12 @@ export default function AuthPortal({
     setAuthMode('login');
     setPassword('');
 
-    if (newRole === 'host') {
-      setName('Vikram Sharma');
-      setEmail('vikram@host.io');
-      setPhone('+91 99887 66554');
-      setCompanyName('Smart Bay Homes');
-    } else {
-      setName('Arjun Rao');
-      setEmail('arjun@parksphere.io');
-      setPhone('+91 98765 43210');
-      setVehiclePlate('TS 09 EZ 4088');
-      setCompanyName('');
-    }
+    const target = profiles?.[newRole] || {};
+    setName(target.name || '');
+    setEmail(target.email || '');
+    setPhone(target.phone || '');
+    setCompanyName(target.companyName || '');
+    setVehiclePlate(target.vehiclePlate || '');
   };
 
   const switchToSignup = () => {
@@ -75,24 +70,11 @@ export default function AuthPortal({
       return;
     }
 
-    const updatedUser = {
-      ...user,
-      name: trimmedName,
-      email: trimmedEmail,
-      role,
-      phone,
-      vehiclePlate:
-        role === 'driver'
-          ? vehiclePlate
-          : user?.vehiclePlate || '',
-      companyName:
-        role === 'host'
-          ? companyName
-          : user?.companyName || '',
-      subscription:
-        user?.subscription ||
-        (role === 'driver' ? 'Pro Plan' : 'Host Pro')
-    };
+    // Start from this role's own profile so driver and host data never mix.
+    const base = profiles?.[role] || {};
+    const updatedUser = role === 'host'
+      ? { ...base, name: trimmedName, email: trimmedEmail, role, phone, companyName }
+      : { ...base, name: trimmedName, email: trimmedEmail, role, phone, vehiclePlate, subscription: base.subscription || 'Free' };
 
     setUser?.(updatedUser);
 
@@ -125,6 +107,11 @@ export default function AuthPortal({
             ? `Login as ${role === 'host' ? 'Host' : 'Driver'}`
             : `Sign Up as ${role === 'host' ? 'Host' : 'Driver'}`}
         </h2>
+        {role === 'driver' && profiles?.driver && (
+          <span style={{ display: 'inline-block', marginTop: 8, padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, color: '#fff', background: profiles.driver.subscription === 'Ultimate' ? '#6d28d9' : profiles.driver.subscription === 'Pro Plan' ? '#059669' : '#64748b' }}>
+            Current plan: {profiles.driver.subscription === 'Pro Plan' ? 'Pro' : profiles.driver.subscription === 'Ultimate' ? 'Ultimate VIP' : 'Free'}
+          </span>
+        )}
       </div>
 
       <p>

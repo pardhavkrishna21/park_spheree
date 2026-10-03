@@ -1,76 +1,210 @@
 import React, { useState } from 'react';
 import './index.css';
+import './reserve.css';
+import { todayStr, toRange, findConflict, fmtTime, TIME_OPTIONS } from '../../utils/bookingTime';
+import { PRICES, getPerks, remaining, washPrice, valetFare } from '../../utils/plans';
+import { getAvailability } from '../../utils/availability';
+import ValetPicker from '../ValetPicker';
 
-export default function BookingModal({ spot, selectedVehicle, bookingHours, user, onClose, onConfirm }) {
+export default function BookingModal({ spot, selectedVehicle, bookingHours, user, usage = { wash: 0, ev: 0 }, existingBookings = [], initialDate, initialTime, onClose, onConfirm }) {
   const [needEV, setNeedEV] = useState(false);
   const [needWash, setNeedWash] = useState(false);
+  const [needValet, setNeedValet] = useState(false);
+  const [valet, setValet] = useState(null);
+  const [date, setDate] = useState(initialDate || todayStr());
+  const [startTime, setStartTime] = useState(initialTime || '');
+  const [hours, setHours] = useState(bookingHours);
 
   if (!spot) return null;
 
+  const perks = getPerks(user?.subscription);
+  const washLeft = remaining(perks.wash, usage.wash);
+  const evLeft = remaining(perks.ev, usage.ev);
+
+  // A slot can be booked after it starts if its selected duration has not
+  // ended yet (for example 7:30 PM at 7:36 PM). Fully elapsed slots cannot.
+  const isTaken = (t) => toRange(date, t, hours)[1] <= Date.now()
+    || Boolean(findConflict(existingBookings, date, t, hours))
+    || getAvailability(spot, date, t, hours, existingBookings).free === 0;
+  const bookedToday = existingBookings.filter((b) => ['Confirmed', 'Parked'].includes(b.status) && b.date === date);
+  const startOk = startTime && !isTaken(startTime);
+
+  const changeHours = (h) => {
+    setHours(h);
+    if (startTime && (toRange(date, startTime, h)[1] <= Date.now() || findConflict(existingBookings, date, startTime, h))) setStartTime('');
+  };
+
   const chargingVehicles = spot.amenities.evChargingVehicles || ['Car', 'Bike'];
   const chargingType = selectedVehicle === 'Bike' ? 'Bike' : 'Car';
-  const canChargeSelectedVehicle = spot.amenities.evCharging && chargingVehicles.includes(chargingType);
-  const canWashSelectedVehicle = selectedVehicle === 'Bike'
+  const canCharge = spot.amenities.evCharging && chargingVehicles.includes(chargingType);
+  const canWash = selectedVehicle === 'Bike'
     ? (spot.amenities.bikeWash ?? spot.amenities.carWash)
     : (spot.amenities.carWash ?? spot.amenities.bikeWash);
 
   const baseRate = selectedVehicle === 'Bike' ? 30 : 50;
   const platRate = selectedVehicle === 'Bike' ? 10 : 20;
 
-  const subtotal = baseRate * bookingHours;
-  let platformFee = platRate * bookingHours;
+  const subtotal = baseRate * hours;
+  let platformFee = platRate * hours;
   if (user?.subscription === 'Pro Plan') platformFee = Math.max(0, platformFee - 10);
   if (user?.subscription === 'Ultimate') platformFee = 0;
 
-  const addOnCost = (needEV ? 50 : 0) + (needWash ? (selectedVehicle === 'Bike' ? 60 : 120) : 0);
+  const freeEV = needEV && canCharge && evLeft > 0;
+  const freeWash = needWash && canWash && washLeft > 0;
+  const evCost = needEV && canCharge && !freeEV ? PRICES.ev : 0;
+  const washCost = needWash && canWash && !freeWash ? washPrice(selectedVehicle) : 0;
+  const valetCost = needValet && valet ? valetFare(valet.km) : 0;
+  const valetOk = !needValet || Boolean(valet);
+  const addOnCost = evCost + washCost + valetCost;
   const grandTotal = subtotal + platformFee + addOnCost;
+  const timeLabel = (t) => fmtTime(toRange(date, t, 0)[0]);
+
+  const addonRow = ({ key, icon, title, detail, checked, onChange, enabled, priceText, free }) => (
+    <label key={key} className={`rm-addon ${checked && enabled ? 'on' : ''} ${enabled ? '' : 'off'}`}>
+      <input type="checkbox" checked={checked && enabled} disabled={!enabled} onChange={(e) => onChange(e.target.checked)} />
+      <span className="rm-addon-main">
+        {icon} {title}
+        <small>{enabled ? detail : 'Not offered for your vehicle at this bay'}</small>
+      </span>
+      <span className={`rm-addon-price ${free ? 'free' : ''}`}>{priceText}</span>
+    </label>
+  );
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>Confirm Parking Slot Reservation</h3>
-          <button className="close-btn" onClick={onClose}>✕</button>
+    <div className="rm-backdrop" onClick={onClose}>
+      <div className="rm-card" onClick={(e) => e.stopPropagation()}>
+        <div className="rm-header">
+          <div>
+            <h3>Confirm Parking Slot Reservation</h3>
+            <p>Pick your date, time and duration</p>
+          </div>
+          <button className="rm-close" onClick={onClose} aria-label="Close">✕</button>
         </div>
 
-        <div className="modal-body">
-          <h4>{spot.name}</h4>
-          <p style={{ fontSize: 13, color: '#64748b' }}>{spot.address}</p>
-
-          <div className="summary-box">
-            <div>Vehicle: <strong>{selectedVehicle}</strong></div>
-            <div>Duration: <strong>{bookingHours} Hours</strong></div>
+        <div className="rm-body">
+          <div className="rm-spot">
+            <div>
+              <h4>{spot.name}</h4>
+              <small>{spot.address}</small>
+            </div>
+            <span className="rm-vehicle">{selectedVehicle === 'Bike' ? '🏍' : '🚗'} {selectedVehicle}</span>
           </div>
 
-          <div className="addon-options">
-            {canChargeSelectedVehicle && (
-              <label>
-                <input type="checkbox" checked={needEV} onChange={(e) => setNeedEV(e.target.checked)} />
-                ⚡ EV charging add-on (+₹50)
-                {spot.amenities.evChargerType && <small className="addon-detail">{spot.amenities.evChargerType} · check your vehicle connector before booking</small>}
-              </label>
-            )}
-            {canWashSelectedVehicle && (
-              <label>
-                <input type="checkbox" checked={needWash} onChange={(e) => setNeedWash(e.target.checked)} />
-                ✨ {selectedVehicle === 'Bike' ? 'Bike' : 'Car'} wash (+₹{selectedVehicle === 'Bike' ? 60 : 120})
-              </label>
+          <div className="rm-section">
+            <h5>Date &amp; duration</h5>
+            <div className="rm-row">
+              <input
+                className="rm-date"
+                type="date"
+                min={todayStr()}
+                value={date}
+                onChange={(e) => { setDate(e.target.value); setStartTime(''); }}
+              />
+              <div className="rm-stepper">
+                <button type="button" disabled={hours <= 1} onClick={() => changeHours(hours - 1)}>−</button>
+                <strong>{hours} hr{hours > 1 ? 's' : ''}</strong>
+                <button type="button" disabled={hours >= 12} onClick={() => changeHours(hours + 1)}>+</button>
+              </div>
+            </div>
+          </div>
+
+          <div className="rm-section">
+            <h5>Start time</h5>
+            <div className="rm-times">
+              {TIME_OPTIONS.map((t) => {
+                const taken = isTaken(t);
+                const mine = Boolean(findConflict(existingBookings, date, t, hours));
+                const alreadyRunning = toRange(date, t, hours)[0] < Date.now();
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    disabled={taken}
+                    className={`rm-time ${startTime === t ? 'selected' : ''} ${mine ? 'mine' : ''}`}
+                    onClick={() => setStartTime(t)}
+                  >
+                    {timeLabel(t)}
+                    <small>{mine ? 'You booked' : taken ? 'Already booked' : alreadyRunning ? `Available now · ends ${fmtTime(toRange(date, t, hours)[1])}` : 'Available'}</small>
+                  </button>
+                );
+              })}
+            </div>
+            {bookedToday.length > 0 && (
+              <div className="rm-hint">
+                Your booked times: {bookedToday.map((b) => { const [s, e] = toRange(b.date, b.startTime, b.hours); return `${fmtTime(s)} - ${fmtTime(e)}`; }).join(', ')}
+              </div>
             )}
           </div>
 
-          <div className="price-lines">
-            <div><span>Parking Rate:</span> <span>₹{subtotal}</span></div>
-            <div><span>Platform Fee:</span> <span>₹{platformFee}</span></div>
-            {addOnCost > 0 && <div><span>Add-ons:</span> <span>₹{addOnCost}</span></div>}
-            <div className="total-line"><span>Total:</span> <span>₹{grandTotal}</span></div>
+          {perks.wash > 0 && (
+            <div className="rm-perks">
+              <div className="rm-perk">
+                Free washes ({perks.label})
+                <strong>{washLeft} left</strong>
+                {usage.wash} used of {perks.wash}
+              </div>
+              <div className="rm-perk">
+                Free EV charging
+                <strong>{perks.ev === Infinity ? 'Unlimited' : `${evLeft} left`}</strong>
+                {usage.ev} used{perks.ev === Infinity ? '' : ` of ${perks.ev}`}
+              </div>
+            </div>
+          )}
+
+          <div className="rm-section">
+            <h5>Add-on services</h5>
+            {addonRow({
+              key: 'ev',
+              icon: '⚡',
+              title: 'EV charging',
+              detail: spot.amenities.evChargerType ? `${spot.amenities.evChargerType} · check your connector before booking` : 'Charge while you park',
+              checked: needEV,
+              onChange: setNeedEV,
+              enabled: Boolean(canCharge),
+              priceText: freeEV ? 'FREE' : `+₹${PRICES.ev}`,
+              free: freeEV
+            })}
+            {addonRow({
+              key: 'wash',
+              icon: '✨',
+              title: `${selectedVehicle === 'Bike' ? 'Bike' : 'Car'} wash`,
+              detail: freeWash ? 'Included in your plan' : 'Exterior wash while you are away',
+              checked: needWash,
+              onChange: setNeedWash,
+              enabled: Boolean(canWash),
+              priceText: freeWash ? 'FREE' : `+₹${washPrice(selectedVehicle)}`,
+              free: freeWash
+            })}
+            {addonRow({
+              key: 'valet',
+              icon: '🔑',
+              title: 'Captain Valet',
+              detail: `Captain picks up your vehicle and parks it for you. ₹${PRICES.valetBase} base + ₹${PRICES.valetPerKm} per km`,
+              checked: needValet,
+              onChange: setNeedValet,
+              enabled: true,
+              priceText: `from ₹${PRICES.valetBase + PRICES.valetPerKm}`,
+              free: false
+            })}
+
+            {needValet && <ValetPicker spot={spot} onChange={setValet} />}
+          </div>
+
+          <div className="rm-price">
+            <div><span>Parking ({hours} hr × ₹{baseRate})</span><span>₹{subtotal}</span></div>
+            <div><span>Platform fee</span><span>₹{platformFee}</span></div>
+            {needEV && canCharge && <div><span>EV charging</span><span>{freeEV ? 'Free (plan)' : `₹${evCost}`}</span></div>}
+            {needWash && canWash && <div><span>Wash</span><span>{freeWash ? 'Free (plan)' : `₹${washCost}`}</span></div>}
+            {needValet && valet && <div><span>Captain Valet ({valet.km} km)</span><span>₹{valetCost}</span></div>}
+            <div className="rm-total"><span>Total</span><span>₹{grandTotal}</span></div>
           </div>
 
           <button
-            className="btn-primary"
-            style={{ width: '100%', justifyContent: 'center', marginTop: 14 }}
-            onClick={() => onConfirm({ grandTotal, needEV, needWash })}
+            className="rm-pay"
+            disabled={!startOk || !valetOk}
+            onClick={() => onConfirm({ grandTotal, addOnCost, needEV: Boolean(needEV && canCharge), needWash: Boolean(needWash && canWash), needValet, valetPickup: valet?.pickup || '', valetKm: valet?.km || 0, valetFee: valetCost, freeEV, freeWash, date, startTime, hours })}
           >
-            Pay & Reserve Slot (₹{grandTotal})
+            {!startOk ? 'Select an available start time' : !valetOk ? 'Choose a pickup location for valet' : `Pay & Reserve Slot (₹${grandTotal})`}
           </button>
         </div>
       </div>
