@@ -24,8 +24,20 @@ export default function HostListings({ user, spots, setSpots, hostSpots, setHost
   const [hours, setHours] = useState(6);
   const [days, setDays] = useState(26);
 
+  const [vehicleMode, setVehicleMode] = useState('Car');
+  const [bookedBays, setBookedBays] = useState({});
+
   const FIXED_CAR = 50;
+  const FIXED_BIKE = 30;
   const projectedMonthly = FIXED_CAR * hours * days;
+  const modeRate = vehicleMode === 'Car' ? FIXED_CAR : FIXED_BIKE;
+  const modeSlots = vehicleMode === 'Car' ? Number(maxCars) : Number(maxBikes);
+  const perDay = modeRate * hours;
+  const perMonthAll = perDay * days * modeSlots;
+  const perYearAll = perMonthAll * 12;
+  const bookedCount = Array.from({ length: Math.min(modeSlots, 30) }, (_, i) => bookedBays[`${vehicleMode}-${i}`]).filter(Boolean).length;
+  const weeklyBars = [0.6, 0.75, 0.7, 0.85, 1, 0.95, 0.8];
+  const weekDays = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
   const toggleEVVehicle = (vehicleType) => {
     setEvChargingVehicles((current) => current.includes(vehicleType)
@@ -233,6 +245,58 @@ export default function HostListings({ user, spots, setSpots, hostSpots, setHost
               <label>Active Days/Month: <strong>{days} days</strong></label>
               <input type="range" min="10" max="30" value={days} onChange={(e) => setDays(Number(e.target.value))} />
             </div>
+          </div>
+
+          <div className="potential-card">
+            <div className="potential-head">
+              <strong>Your full-space potential</strong>
+              <div className="potential-toggle" role="tablist">
+                {['Car', 'Bike'].map((mode) => (
+                  <button type="button" key={mode} className={vehicleMode === mode ? 'active' : ''} onClick={() => setVehicleMode(mode)}>
+                    {mode === 'Car' ? '🚗 Cars' : '🏍️ Bikes'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="potential-stats">
+              <div><span>Per day / slot</span><strong>₹{perDay.toLocaleString('en-IN')}</strong></div>
+              <div><span>Monthly ({modeSlots} {vehicleMode.toLowerCase()} slots)</span><strong>₹{perMonthAll.toLocaleString('en-IN')}</strong></div>
+              <div className="wide"><span>Yearly potential</span><strong>₹{perYearAll.toLocaleString('en-IN')}</strong></div>
+            </div>
+
+            <div className="bay-sim">
+              <div className="bay-sim-title">
+                <span>Tap bays to simulate bookings</span>
+                <strong>{bookedCount}/{modeSlots} booked · ₹{(bookedCount * perDay).toLocaleString('en-IN')}/day</strong>
+              </div>
+              <div className="bay-grid">
+                {Array.from({ length: Math.min(modeSlots, 30) }, (_, i) => {
+                  const key = `${vehicleMode}-${i}`;
+                  return (
+                    <button type="button" key={key} className={`bay${bookedBays[key] ? ' booked' : ''}`} onClick={() => setBookedBays((b) => ({ ...b, [key]: !b[key] }))}>
+                      {bookedBays[key] ? (vehicleMode === 'Car' ? '🚗' : '🏍️') : i + 1}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="potential-bars" aria-label="Typical weekly demand">
+              {weeklyBars.map((v, i) => (
+                <div key={i} className="bar-col" title={`₹${Math.round(perDay * modeSlots * v).toLocaleString('en-IN')}`}>
+                  <div className="bar" style={{ height: `${v * 64}px` }} />
+                  <span>{weekDays[i]}</span>
+                </div>
+              ))}
+            </div>
+            <p className="potential-note">Weekends and office hours tend to see the highest demand. Hover a bar for the day's estimate.</p>
+
+            <ul className="potential-tips">
+              <li><IconCheck size={14} /> Add EV charging to attract more bookings</li>
+              <li><IconCheck size={14} /> Clear photos get noticed faster</li>
+              <li><IconCheck size={14} /> Payouts go straight to your UPI</li>
+            </ul>
           </div>
         </div>
       </div>

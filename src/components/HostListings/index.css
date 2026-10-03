@@ -21,8 +21,67 @@
 .host-split {
   display: grid;
   grid-template-columns: 1.25fr 0.75fr;
-  align-items: start;
+  align-items: stretch;
   gap: 24px;
+}
+
+.host-calc-side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.host-calc-side .potential-card {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  margin-top: 0;
+}
+
+.host-calc-side .potential-bars {
+  min-height: 90px;
+}
+
+.bay-sim {
+  margin-top: 16px;
+}
+
+.bay-sim-title {
+  display: flex;
+  justify-content: space-between;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.bay-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.bay {
+  aspect-ratio: 1;
+  border: 2px dashed #a7f3d0;
+  border-radius: 10px;
+  background: #f0fdf4;
+  font-size: 18px;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.2s, border-color 0.2s;
+}
+
+.bay:hover {
+  transform: translateY(-2px) scale(1.05);
+}
+
+.bay.booked {
+  border: 2px solid #059669;
+  background: #d1fae5;
+}
+
+.potential-tips {
+  margin-top: auto;
 }
 
 .host-form {
@@ -468,6 +527,140 @@
   width: 100%;
   accent-color: #10b981;
   margin: 6px 0 12px;
+}
+
+.potential-card {
+  margin-top: 16px;
+  padding: 20px;
+  border: 1px solid #d1fae5;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+}
+
+.potential-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: #0f172a;
+}
+
+.potential-toggle {
+  display: flex;
+  padding: 3px;
+  border-radius: 999px;
+  background: #ecfdf5;
+}
+
+.potential-toggle button {
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 12px;
+  background: transparent;
+  color: #047857;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.potential-toggle button.active {
+  background: #10b981;
+  color: #fff;
+}
+
+.potential-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.potential-stats > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f0fdf4;
+}
+
+.potential-stats > .wide {
+  grid-column: 1 / -1;
+  background: #ecfdf5;
+}
+
+.potential-stats span {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.potential-stats strong {
+  color: #047857;
+  font-size: 18px;
+}
+
+.potential-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  height: 90px;
+  margin-top: 16px;
+}
+
+.bar-col {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.bar-col .bar {
+  width: 100%;
+  border-radius: 6px 6px 0 0;
+  background: linear-gradient(180deg, #34d399, #059669);
+  transition: height 0.3s, filter 0.2s;
+}
+
+.bar-col:hover .bar {
+  filter: brightness(1.15);
+}
+
+.bar-col span {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.potential-note {
+  margin: 10px 0 0;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.potential-tips {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 14px 0 0;
+  border-top: 1px dashed #d1fae5;
+  list-style: none;
+  color: #334155;
+  font-size: 13px;
+}
+
+.potential-tips li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.potential-tips svg {
+  color: #059669;
+  flex-shrink: 0;
 }
 
 @media (max-width: 900px) {
