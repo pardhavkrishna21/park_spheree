@@ -1,4 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import './App.css';
+
 import Navbar from './components/Navbar';
 import FindParking from './components/FindParking';
 import Subscriptions from './components/Subscriptions';
@@ -13,6 +16,7 @@ import BookingModal from './components/BookingModal';
 import FeedbackModal from './components/FeedbackModal';
 import AuthPortal from './components/AuthPortal';
 import Footer from './components/Footer';
+
 import { INITIAL_PARKING_SPOTS, INITIAL_HOST_BOOKINGS } from './data/mockData';
 import { todayStr, toRange, fmtSlot, findConflict } from './utils/bookingTime';
 import { PRICES, washPrice, valetFare } from './utils/plans';
@@ -30,11 +34,42 @@ import {
   registerAccount
 } from './utils/auth';
 
+const TAB_TO_PATH = {
+  find: '/home',
+  subscription: '/subscriptions',
+  services: '/evcharging',
+  captain: '/captainvalet',
+  bookings: '/bookings',
+  help: '/help',
+  account: '/accountdetails',
+  'host-listings': '/hostlistings',
+  'host-dashboard': '/hostdashboard'
+};
+
+const PATH_TO_TAB = {
+  '/': 'find',
+  '/home': 'find',
+  '/subscriptions': 'subscription',
+  '/evcharging': 'services',
+  '/captainvalet': 'captain',
+  '/bookings': 'bookings',
+  '/help': 'help',
+  '/accountdetails': 'account',
+  '/hostlistings': 'host-listings',
+  '/hostdashboard': 'host-dashboard'
+};
+
+const DRIVER_ONLY_TABS = ['find', 'services', 'subscription', 'bookings'];
+const HOST_ONLY_TABS = ['host-listings', 'host-dashboard'];
+
 /* ------------------------------------------------------------------ */
 /*  OUTER SHELL: accounts, login session, toast                       */
 /* ------------------------------------------------------------------ */
 
 const App = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const [accounts, setAccounts] = useLocalStorage('ps_accounts', SEED_ACCOUNTS);
   const [session, setSession] = useLocalStorage('ps_session', null);
   const [authIntent, setAuthIntent] = useState(null);
@@ -54,6 +89,7 @@ const App = () => {
     if (result.ok) {
       setAuthIntent(null);
       setSession({ role: result.account.role, email: result.account.email });
+      navigate(result.account.role === 'host' ? '/hostlistings' : '/home', { replace: true });
     }
     return result;
   };
@@ -64,6 +100,7 @@ const App = () => {
       setAccounts(result.accounts);
       setAuthIntent(null);
       setSession({ role: result.account.role, email: result.account.email });
+      navigate(result.account.role === 'host' ? '/hostlistings' : '/home', { replace: true });
     }
     return result;
   };
@@ -71,6 +108,7 @@ const App = () => {
   const handleLogout = () => {
     setSession(null);
     setAuthIntent(null);
+    navigate('/login', { replace: true });
     showToast('You have been logged out. Please log in again.');
   };
 
@@ -80,7 +118,6 @@ const App = () => {
     showToast('📝 Drivers require a dedicated host account. Please register.');
   };
 
-  // Profile edits (e.g. changing the subscription plan) are saved back to the account.
   const handleProfileChange = (resolved) => {
     if (!account) return;
     const key = accountKey(account.role, account.email);
@@ -93,7 +130,20 @@ const App = () => {
     );
   };
 
-  // Not logged in: show only the login / sign up screen.
+  // Route protection
+  useEffect(() => {
+    if (!account) {
+      if (location.pathname !== '/login') {
+        navigate('/login', { replace: true });
+      }
+      return;
+    }
+
+    if (location.pathname === '/' || location.pathname === '/login') {
+      navigate(account.role === 'host' ? '/hostlistings' : '/home', { replace: true });
+    }
+  }, [account, location.pathname, navigate]);
+
   if (!account) {
     return (
       <div className="app-wrapper">
@@ -108,7 +158,6 @@ const App = () => {
             initialMode={authIntent?.mode || 'login'}
           />
         </main>
-        <Footer />
       </div>
     );
   }
@@ -133,6 +182,9 @@ const App = () => {
 /* ------------------------------------------------------------------ */
 
 function ParkSphereApp({ user, onProfileChange, onLogout, onBecomeHost, showToast }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const activeRole = user.role;
   const email = user.email;
   const isDemoHost = email.toLowerCase() === DEMO_HOST_EMAIL;
@@ -143,9 +195,55 @@ function ParkSphereApp({ user, onProfileChange, onLogout, onBecomeHost, showToas
     onProfileChange(resolved);
   };
 
-  const [currentTab, setCurrentTab] = useState(activeRole === 'host' ? 'host-listings' : 'find');
+  // Derive tab directly from route
+  const currentTab = useMemo(() => {
+    const tabFromUrl = PATH_TO_TAB[location.pathname];
+    if (tabFromUrl) return tabFromUrl;
+    return activeRole === 'host' ? 'host-listings' : 'find';
+  }, [location.pathname, activeRole]);
 
-  // Shared by everyone: all listings, and the host-side record of every booking.
+  // Navigate when links trigger tab switches
+  const setCurrentTab = (nextTab) => {
+    if (nextTab === 'auth') {
+      onLogout();
+      return;
+    }
+
+    let targetTab = nextTab;
+    if (activeRole === 'host' && DRIVER_ONLY_TABS.includes(targetTab)) {
+      targetTab = 'host-listings';
+    }
+    if (activeRole === 'driver' && HOST_ONLY_TABS.includes(targetTab)) {
+      targetTab = 'find';
+    }
+
+    const nextPath = TAB_TO_PATH[targetTab];
+    if (nextPath && location.pathname !== nextPath) {
+      navigate(nextPath);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Enforce role-based path validation on direct URL navigation
+  useEffect(() => {
+    const tabFromUrl = PATH_TO_TAB[location.pathname];
+
+    if (!tabFromUrl) {
+      const fallbackPath = activeRole === 'host' ? '/hostlistings' : '/home';
+      navigate(fallbackPath, { replace: true });
+      return;
+    }
+
+    if (activeRole === 'host' && DRIVER_ONLY_TABS.includes(tabFromUrl)) {
+      navigate('/hostlistings', { replace: true });
+      return;
+    }
+
+    if (activeRole === 'driver' && HOST_ONLY_TABS.includes(tabFromUrl)) {
+      navigate('/home', { replace: true });
+    }
+  }, [location.pathname, activeRole, navigate]);
+
   const [spots, setSpots] = useLocalStorage('ps_spots', INITIAL_PARKING_SPOTS);
   const [hostBookings, setHostBookings] = useLocalStorage('ps_hostBookings', INITIAL_HOST_BOOKINGS);
   const [feedbacks, setFeedbacks] = useLocalStorage('ps_feedbacks', [
@@ -183,7 +281,6 @@ function ParkSphereApp({ user, onProfileChange, onLogout, onBecomeHost, showToas
     }
   ]);
 
-  // Private to this account.
   const [hostSpots, setHostSpots] = useLocalStorage(
     userKey('ps_hostSpots', email),
     () => (isDemoHost ? [INITIAL_PARKING_SPOTS[0]] : [])
@@ -193,7 +290,14 @@ function ParkSphereApp({ user, onProfileChange, onLogout, onBecomeHost, showToas
     userKey('ps_withdrawals', email),
     () =>
       isDemoHost
-        ? [{ id: 'PO-20261003-001', amount: 2670, upi: 'vikram@okaxis', timestamp: new Date(2026, 9, 3, 9, 15).toISOString() }]
+        ? [
+            {
+              id: 'PO-20261003-001',
+              amount: 2670,
+              upi: 'vikram@okaxis',
+              timestamp: new Date(2026, 9, 3, 9, 15).toISOString()
+            }
+          ]
         : []
   );
 
@@ -221,11 +325,12 @@ function ParkSphereApp({ user, onProfileChange, onLogout, onBecomeHost, showToas
       : []
   );
 
-  const ownedSpotNames = new Set(hostSpots.map((s) => s.name));
-  const visibleHostBookings =
-    activeRole !== 'host'
+  const ownedSpotNames = useMemo(() => new Set(hostSpots.map((s) => s.name)), [hostSpots]);
+  const visibleHostBookings = useMemo(() => {
+    return activeRole !== 'host'
       ? []
       : hostBookings.filter((h) => ownedSpotNames.has(h.spotName) || (isDemoHost && !h.createdAt));
+  }, [activeRole, hostBookings, ownedSpotNames, isDemoHost]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedVehicle, setSelectedVehicle] = useState('Car');
@@ -240,24 +345,11 @@ function ParkSphereApp({ user, onProfileChange, onLogout, onBecomeHost, showToas
   const [feedbackBookingId, setFeedbackBookingId] = useState(null);
   const [now, setNow] = useState(Date.now());
 
-  // Keep navigation scoped to the active role
-  useEffect(() => {
-    const driverTabs = ['find', 'subscription', 'bookings', 'services'];
-    const hostTabs = ['host-listings', 'host-dashboard'];
-    if (activeRole === 'host' && driverTabs.includes(currentTab)) setCurrentTab('host-listings');
-    if (activeRole === 'driver' && hostTabs.includes(currentTab)) setCurrentTab('find');
-  }, [activeRole, currentTab]);
-
-  useEffect(() => {
-    if (currentTab === 'auth') onLogout();
-  }, [currentTab]);
-
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 30000);
     return () => clearInterval(id);
   }, []);
 
-  // Sync booking status with clock
   useEffect(() => {
     const endOf = (b) => toRange(b.date, b.startTime, b.hours)[1];
     const missed = userBookings.filter((b) => b.status === 'Confirmed' && endOf(b) <= now);
@@ -291,6 +383,8 @@ function ParkSphereApp({ user, onProfileChange, onLogout, onBecomeHost, showToas
       })
     );
 
+    if (finishedIds.length && activeRole === 'driver') setFeedbackBookingId(finishedIds[0]);
+
     const freed = missed.reduce(
       (acc, b) => ({
         wash: acc.wash + (b.freeWash ? 1 : 0),
@@ -308,7 +402,7 @@ function ParkSphereApp({ user, onProfileChange, onLogout, onBecomeHost, showToas
         `Booking at ${missed[0].spotName} was cancelled because you did not park. This is a violation. Please cancel bookings you don't need.`
       );
     }
-  }, [now, userBookings]);
+  }, [now, userBookings, activeRole]);
 
   const violationInfo = getViolationStatus(userBookings, now);
   const holdUntilText = violationInfo.holdUntil
@@ -330,6 +424,12 @@ function ParkSphereApp({ user, onProfileChange, onLogout, onBecomeHost, showToas
   const lastOutcome = userBookings
     .filter((b) => b.status === 'Completed' || b.status === 'Cancelled')
     .sort((a, b) => endOfBooking(b) - endOfBooking(a))[0];
+
+  const feedbackBooking = feedbackBookingId
+    ? userBookings.find(
+        (b) => b.id === feedbackBookingId && b.status === 'Completed' && !feedbacks.some((f) => f.bookingId === b.id)
+      )
+    : null;
 
   const handleCheckIn = (id) => {
     const b = userBookings.find((x) => x.id === id);
@@ -408,14 +508,23 @@ function ParkSphereApp({ user, onProfileChange, onLogout, onBecomeHost, showToas
   const handleFeedbackSubmit = ({ bookingId, rating, comment }) => {
     const booking = userBookings.find((b) => b.id === bookingId);
     if (!booking || booking.status !== 'Completed' || feedbacks.some((f) => f.bookingId === bookingId)) return;
+
+    const stars = Number(rating) || 0;
+    const cleanComment = (comment || '').trim();
+
+    if (!stars && !cleanComment) {
+      showToast('Slot completed. Thank you for parking with us!');
+      return;
+    }
+
     setFeedbacks((previous) => [
       {
         id: `fb-${Date.now()}`,
         bookingId,
         name: user.name,
         spotName: booking.spotName,
-        rating,
-        comment,
+        rating: stars || null,
+        comment: cleanComment,
         date: todayStr()
       },
       ...previous
@@ -648,10 +757,6 @@ function ParkSphereApp({ user, onProfileChange, onLogout, onBecomeHost, showToas
     setCurrentTab('bookings');
   };
 
-  const feedbackBooking = feedbackBookingId
-    ? userBookings.find((b) => b.id === feedbackBookingId)
-    : null;
-
   return (
     <div className="app-wrapper">
       <Navbar
@@ -665,27 +770,13 @@ function ParkSphereApp({ user, onProfileChange, onLogout, onBecomeHost, showToas
       />
 
       <main className="main-content">
-        {/* DRIVER FLOW */}
         {currentTab === 'find' && (
           <div>
             {parkedNow && (
-              <div
-                style={{
-                  background: '#eff6ff',
-                  border: '1px solid #93c5fd',
-                  borderRadius: 12,
-                  padding: '14px 18px',
-                  marginBottom: 20,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  gap: 12,
-                  flexWrap: 'wrap'
-                }}
-              >
+              <div className="status-banner status-banner-info">
                 <div>
                   <strong>🅿️ Parked now: {parkedNow.spotName}</strong>
-                  <div style={{ fontSize: 13, color: '#475569' }}>
+                  <div className="banner-subtext">
                     {parkedNow.timeSlot} • {parkedNow.vehicle}
                   </div>
                 </div>
@@ -696,17 +787,7 @@ function ParkSphereApp({ user, onProfileChange, onLogout, onBecomeHost, showToas
             )}
 
             {lastOutcome?.violation && (
-              <div
-                style={{
-                  background: '#fee2e2',
-                  border: '2px solid #dc2626',
-                  borderLeftWidth: 8,
-                  borderRadius: 12,
-                  padding: '14px 18px',
-                  marginBottom: 20,
-                  color: '#7f1d1d'
-                }}
-              >
+              <div className="status-banner-violation">
                 <strong style={{ color: '#b91c1c', fontSize: 16 }}>
                   ⚠ Not parked: you booked {lastOutcome.spotName} but did not check in
                 </strong>
@@ -721,71 +802,40 @@ function ParkSphereApp({ user, onProfileChange, onLogout, onBecomeHost, showToas
             )}
 
             {lastOutcome && !lastOutcome.violation && (
-              <div
-                style={{
-                  background: lastOutcome.status === 'Completed' ? '#ecfdf5' : '#f8fafc',
-                  border: `1px solid ${lastOutcome.status === 'Completed' ? '#6ee7b7' : '#cbd5e1'}`,
-                  borderRadius: 12,
-                  padding: '14px 18px',
-                  marginBottom: 20
-                }}
-              >
+              <div className={lastOutcome.status === 'Completed' ? 'status-banner status-banner-success' : 'status-banner-muted'}>
                 {lastOutcome.status === 'Completed' ? (
-                  <>
+                  <div>
                     <strong style={{ color: '#047857' }}>
                       ✓ Last completed parking: you checked in and completed this slot
                     </strong>
-                    <div style={{ fontSize: 13, color: '#065f46' }}>
+                    <div style={{ fontSize: 13, color: '#065f46', marginTop: 2 }}>
                       {lastOutcome.spotName} • {lastOutcome.timeSlot} • Completed
                     </div>
-                  </>
+                  </div>
                 ) : (
-                  <>
+                  <div>
                     <strong style={{ color: '#334155' }}>
                       Booking cancelled: {lastOutcome.spotName}
                     </strong>
-                    <div style={{ fontSize: 13, color: '#475569' }}>
+                    <div className="banner-subtext">
                       {lastOutcome.timeSlot} • {lastOutcome.cancelReason}
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
             )}
 
             {violationInfo.holdUntil && (
-              <div
-                style={{
-                  background: '#fef2f2',
-                  border: '1px solid #f87171',
-                  borderRadius: 12,
-                  padding: '14px 18px',
-                  marginBottom: 20,
-                  color: '#991b1b'
-                }}
-              >
+              <div className="status-banner status-banner-warning">
                 <strong>Account on hold until {holdUntilText}.</strong> You missed {MAX_VIOLATIONS} booked slots, so new bookings are paused for 3 months.
               </div>
             )}
 
             {activeBooking && (
-              <div
-                className="active-booking-banner"
-                style={{
-                  background: '#ecfdf5',
-                  border: '1px solid #6ee7b7',
-                  borderRadius: 12,
-                  padding: '14px 18px',
-                  marginBottom: 20,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  gap: 12,
-                  flexWrap: 'wrap'
-                }}
-              >
+              <div className="status-banner status-banner-success">
                 <div>
                   <strong>Your active booking: {activeBooking.spotName}</strong>
-                  <div style={{ fontSize: 13, color: '#475569' }}>
+                  <div className="banner-subtext">
                     {activeSpot?.address && <>{activeSpot.address} • </>}
                     {activeBooking.timeSlot} • {activeBooking.vehicle} • Entry OTP {activeBooking.otpCode}
                   </div>
@@ -837,7 +887,6 @@ function ParkSphereApp({ user, onProfileChange, onLogout, onBecomeHost, showToas
           </div>
         )}
 
-        {/* SPACE HOST VIEWS */}
         {currentTab === 'host-listings' && (
           <HostListings
             user={user}
@@ -868,7 +917,6 @@ function ParkSphereApp({ user, onProfileChange, onLogout, onBecomeHost, showToas
           />
         )}
 
-        {/* INDIVIDUAL TABS */}
         {currentTab === 'subscription' && (
           <Subscriptions user={user} setUser={setUser} showToast={showToast} />
         )}
@@ -935,7 +983,6 @@ function ParkSphereApp({ user, onProfileChange, onLogout, onBecomeHost, showToas
         )}
       </main>
 
-      {/* CHECKOUT MODAL */}
       {bookingModalSpot && (
         <BookingModal
           spot={bookingModalSpot}
@@ -951,7 +998,6 @@ function ParkSphereApp({ user, onProfileChange, onLogout, onBecomeHost, showToas
         />
       )}
 
-      {/* FEEDBACK POPUP: appears in the center after a slot is completed */}
       {feedbackBooking && (
         <FeedbackModal
           booking={feedbackBooking}
@@ -959,7 +1005,6 @@ function ParkSphereApp({ user, onProfileChange, onLogout, onBecomeHost, showToas
             handleFeedbackSubmit({ bookingId: feedbackBooking.id, rating, comment });
             setFeedbackBookingId(null);
           }}
-          onClose={() => setFeedbackBookingId(null)}
         />
       )}
 
