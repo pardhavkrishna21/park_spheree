@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Navbar from './components/Navbar';
 import FindParking from './components/FindParking';
 import Subscriptions from './components/Subscriptions';
@@ -10,54 +10,222 @@ import ServicesView from './components/ServicesView';
 import HelpFeedback from './components/HelpFeedback';
 import AccountView from './components/AccountView';
 import BookingModal from './components/BookingModal';
+import FeedbackModal from './components/FeedbackModal';
 import AuthPortal from './components/AuthPortal';
 import Footer from './components/Footer';
-
 import { INITIAL_PARKING_SPOTS, INITIAL_HOST_BOOKINGS } from './data/mockData';
 import { todayStr, toRange, fmtSlot, findConflict } from './utils/bookingTime';
 import { PRICES, washPrice, valetFare } from './utils/plans';
 import { getAvailability, nextSlotTime } from './utils/availability';
 import { getViolationStatus, MAX_VIOLATIONS } from './utils/violations';
+import useLocalStorage from './utils/useLocalStorage';
+import {
+  SEED_ACCOUNTS,
+  DEMO_DRIVER_EMAIL,
+  DEMO_HOST_EMAIL,
+  accountKey,
+  userKey,
+  findAccount,
+  authenticate,
+  registerAccount
+} from './utils/auth';
 
-export default function App() {
-  // Driver and host are separate accounts; each keeps its own profile data.
-  const [driverProfile, setDriverProfile] = useState({
-    name: 'Arjun Rao',
-    email: 'arjun@parksphere.io',
-    role: 'driver',
-    phone: '+91 98765 43210',
-    vehiclePlate: 'TS 09 EZ 4088',
-    subscription: 'Pro Plan'
-  });
-  const [hostProfile, setHostProfile] = useState({
-    name: 'Vikram Sharma',
-    email: 'vikram@host.io',
-    role: 'host',
-    phone: '+91 99887 66554',
-    companyName: 'Smart Bay Homes'
-  });
-  const [activeRole, setActiveRole] = useState('driver');
-  const user = activeRole === 'host' ? hostProfile : driverProfile;
-  const setUser = (next) => {
-    const resolved = typeof next === 'function' ? next(user) : next;
-    if (resolved.role === 'host') {
-      setHostProfile(resolved);
-      setActiveRole('host');
-    } else {
-      setDriverProfile(resolved);
-      setActiveRole('driver');
-    }
+/* ------------------------------------------------------------------ */
+/*  OUTER SHELL: accounts, login session, toast                       */
+/* ------------------------------------------------------------------ */
+
+const App = () => {
+  const [accounts, setAccounts] = useLocalStorage('ps_accounts', SEED_ACCOUNTS);
+  const [session, setSession] = useLocalStorage('ps_session', null);
+  const [authIntent, setAuthIntent] = useState(null);
+  const [toast, setToast] = useState(null);
+  const toastTimer = useRef(null);
+
+  const showToast = (msg) => {
+    setToast(msg);
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 4000);
   };
 
-  const [currentTab, setCurrentTab] = useState('find');
-  const [spots, setSpots] = useState(INITIAL_PARKING_SPOTS);
-  const [hostSpots, setHostSpots] = useState([INITIAL_PARKING_SPOTS[0]]);
-  const [hostBookings, setHostBookings] = useState(INITIAL_HOST_BOOKINGS);
-  // Payouts are part of the host ledger, not a display-only wallet number. The
-  // seeded host has withdrawn all earnings recorded before this session.
-  const [hostWithdrawals, setHostWithdrawals] = useState([
-    { id: 'PO-20261003-001', amount: 2670, upi: 'vikram@okaxis', timestamp: new Date(2026, 9, 3, 9, 15).toISOString() }
+  const account = session ? findAccount(accounts, session.role, session.email) : null;
+
+  const handleLogin = (role, email, password) => {
+    const result = authenticate(accounts, role, email, password);
+    if (result.ok) {
+      setAuthIntent(null);
+      setSession({ role: result.account.role, email: result.account.email });
+    }
+    return result;
+  };
+
+  const handleSignup = (profile, password) => {
+    const result = registerAccount(accounts, profile, password);
+    if (result.ok) {
+      setAccounts(result.accounts);
+      setAuthIntent(null);
+      setSession({ role: result.account.role, email: result.account.email });
+    }
+    return result;
+  };
+
+  const handleLogout = () => {
+    setSession(null);
+    setAuthIntent(null);
+    showToast('You have been logged out. Please log in again.');
+  };
+
+  const handleBecomeHost = () => {
+    setSession(null);
+    setAuthIntent({ role: 'host', mode: 'signup' });
+    showToast('📝 Drivers require a dedicated host account. Please register.');
+  };
+
+  // Profile edits (e.g. changing the subscription plan) are saved back to the account.
+  const handleProfileChange = (resolved) => {
+    if (!account) return;
+    const key = accountKey(account.role, account.email);
+    setAccounts((prev) =>
+      prev.map((a) =>
+        accountKey(a.role, a.email) === key
+          ? { ...a, profile: { ...a.profile, ...resolved, role: a.role, email: a.profile.email } }
+          : a
+      )
+    );
+  };
+
+  // Not logged in: show only the login / sign up screen.
+  if (!account) {
+    return (
+      <div className="app-wrapper">
+        {toast && <div className="toast-banner">{toast}</div>}
+        <main className="main-content">
+          <AuthPortal
+            key={authIntent ? 'intent' : 'default'}
+            onLogin={handleLogin}
+            onSignup={handleSignup}
+            showToast={showToast}
+            initialRole={authIntent?.role || 'driver'}
+            initialMode={authIntent?.mode || 'login'}
+          />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {toast && <div className="toast-banner">{toast}</div>}
+      <ParkSphereApp
+        key={accountKey(account.role, account.email)}
+        user={account.profile}
+        onProfileChange={handleProfileChange}
+        onLogout={handleLogout}
+        onBecomeHost={handleBecomeHost}
+        showToast={showToast}
+      />
+    </>
+  );
+};
+
+/* ------------------------------------------------------------------ */
+/*  LOGGED-IN APP: all data below belongs to the logged-in account     */
+/* ------------------------------------------------------------------ */
+
+function ParkSphereApp({ user, onProfileChange, onLogout, onBecomeHost, showToast }) {
+  const activeRole = user.role;
+  const email = user.email;
+  const isDemoHost = email.toLowerCase() === DEMO_HOST_EMAIL;
+  const isDemoDriver = email.toLowerCase() === DEMO_DRIVER_EMAIL;
+
+  const setUser = (next) => {
+    const resolved = typeof next === 'function' ? next(user) : next;
+    onProfileChange(resolved);
+  };
+
+  const [currentTab, setCurrentTab] = useState(activeRole === 'host' ? 'host-listings' : 'find');
+
+  // Shared by everyone: all listings, and the host-side record of every booking.
+  const [spots, setSpots] = useLocalStorage('ps_spots', INITIAL_PARKING_SPOTS);
+  const [hostBookings, setHostBookings] = useLocalStorage('ps_hostBookings', INITIAL_HOST_BOOKINGS);
+  const [feedbacks, setFeedbacks] = useLocalStorage('ps_feedbacks', [
+    {
+      id: 'fb-1',
+      name: 'Priya S.',
+      spotName: 'ITC Kohenur Street Gated Driveway',
+      rating: 5,
+      comment: 'Reached 10 minutes early, checked in and the bay was exactly as shown. Super easy exit too.',
+      date: '2026-09-28'
+    },
+    {
+      id: 'fb-2',
+      name: 'Rahul M.',
+      spotName: 'Nexus Mall Safe Garage Spot',
+      rating: 4,
+      comment: 'Saved me a 30 minute parking hunt at the mall. The EV charger was ready when I arrived.',
+      date: '2026-09-25'
+    },
+    {
+      id: 'fb-3',
+      name: 'Ananya K.',
+      spotName: 'AMB Mall Kondapur Covered Bay',
+      rating: 5,
+      comment: 'Used Captain Valet for a weekend movie. Photos before and after parking gave me full confidence.',
+      date: '2026-09-21'
+    },
+    {
+      id: 'fb-4',
+      name: 'Imran A.',
+      spotName: 'HITEC City Cyber Towers Parking',
+      rating: 4,
+      comment: 'Clean, secure and fair price. Would love more slots in the evening.',
+      date: '2026-09-17'
+    }
   ]);
+
+  // Private to this account.
+  const [hostSpots, setHostSpots] = useLocalStorage(
+    userKey('ps_hostSpots', email),
+    () => (isDemoHost ? [INITIAL_PARKING_SPOTS[0]] : [])
+  );
+
+  const [hostWithdrawals, setHostWithdrawals] = useLocalStorage(
+    userKey('ps_withdrawals', email),
+    () =>
+      isDemoHost
+        ? [{ id: 'PO-20261003-001', amount: 2670, upi: 'vikram@okaxis', timestamp: new Date(2026, 9, 3, 9, 15).toISOString() }]
+        : []
+  );
+
+  const [usage, setUsage] = useLocalStorage(userKey('ps_usage', email), { wash: 0, ev: 0 });
+
+  const [userBookings, setUserBookings] = useLocalStorage(userKey('ps_userBookings', email), () =>
+    isDemoDriver
+      ? [
+          {
+            id: 'PS-BOOK-8821',
+            spotName: 'Nexus Mall Safe Garage Spot',
+            hostName: 'Vikram Sharma',
+            timeSlot: fmtSlot(todayStr(), '10:00', 2),
+            date: todayStr(),
+            startTime: '10:00',
+            vehicle: 'Car (TS 09 EZ 4088)',
+            totalPaid: 130,
+            hours: 2,
+            vehicleType: 'Car',
+            addOnCost: 0,
+            otpCode: '4928',
+            status: 'Confirmed'
+          }
+        ]
+      : []
+  );
+
+  const ownedSpotNames = new Set(hostSpots.map((s) => s.name));
+  const visibleHostBookings =
+    activeRole !== 'host'
+      ? []
+      : hostBookings.filter((h) => ownedSpotNames.has(h.spotName) || (isDemoHost && !h.createdAt));
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedVehicle, setSelectedVehicle] = useState('Car');
@@ -69,35 +237,10 @@ export default function App() {
   const [filterCovered, setFilterCovered] = useState(false);
 
   const [bookingModalSpot, setBookingModalSpot] = useState(null);
-  const [usage, setUsage] = useState({ wash: 0, ev: 0 });
-  const [feedbacks, setFeedbacks] = useState([
-    { id: 'fb-1', name: 'Priya S.', spotName: 'ITC Kohenur Street Gated Driveway', rating: 5, comment: 'Reached 10 minutes early, checked in and the bay was exactly as shown. Super easy exit too.', date: '2026-09-28' },
-    { id: 'fb-2', name: 'Rahul M.', spotName: 'Nexus Mall Safe Garage Spot', rating: 4, comment: 'Saved me a 30 minute parking hunt at the mall. The EV charger was ready when I arrived.', date: '2026-09-25' },
-    { id: 'fb-3', name: 'Ananya K.', spotName: 'AMB Mall Kondapur Covered Bay', rating: 5, comment: 'Used Captain Valet for a weekend movie. Photos before and after parking gave me full confidence.', date: '2026-09-21' },
-    { id: 'fb-4', name: 'Imran A.', spotName: 'HITEC City Cyber Towers Parking', rating: 4, comment: 'Clean, secure and fair price. Would love more slots in the evening.', date: '2026-09-17' }
-  ]);
-  const [userBookings, setUserBookings] = useState([
-    {
-      id: 'PS-BOOK-8821',
-      spotName: 'Nexus Mall Safe Garage Spot',
-      hostName: 'Vikram Sharma',
-      timeSlot: fmtSlot(todayStr(), '10:00', 2),
-      date: todayStr(),
-      startTime: '10:00',
-      vehicle: 'Car (TS 09 EZ 4088)',
-      totalPaid: 130,
-      hours: 2,
-      vehicleType: 'Car',
-      addOnCost: 0,
-      otpCode: '4928',
-      status: 'Confirmed'
-    }
-  ]);
-
-  const [toast, setToast] = useState(null);
+  const [feedbackBookingId, setFeedbackBookingId] = useState(null);
   const [now, setNow] = useState(Date.now());
 
-  // Never leave a role on a page that belongs to the other role.
+  // Keep navigation scoped to the active role
   useEffect(() => {
     const driverTabs = ['find', 'subscription', 'bookings', 'services'];
     const hostTabs = ['host-listings', 'host-dashboard'];
@@ -106,16 +249,15 @@ export default function App() {
   }, [activeRole, currentTab]);
 
   useEffect(() => {
+    if (currentTab === 'auth') onLogout();
+  }, [currentTab]);
+
+  useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 30000);
     return () => clearInterval(id);
   }, []);
 
-  const showToast = (msg) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 4000);
-  };
-
-  // Keep booking status in sync with the clock: no-shows are cancelled, finished stays complete.
+  // Sync booking status with clock
   useEffect(() => {
     const endOf = (b) => toRange(b.date, b.startTime, b.hours)[1];
     const missed = userBookings.filter((b) => b.status === 'Confirmed' && endOf(b) <= now);
@@ -124,31 +266,63 @@ export default function App() {
 
     const missedIds = missed.map((b) => b.id);
     const finishedIds = finished.map((b) => b.id);
-    setUserBookings((prev) => prev.map((b) => {
-      if (missedIds.includes(b.id)) {
-        return { ...b, status: 'Cancelled', violation: true, violationAt: now, cancelReason: 'You did not park during the booked slot. This counts as a violation.' };
-      }
-      if (finishedIds.includes(b.id)) return { ...b, status: 'Completed' };
-      return b;
-    }));
-    setHostBookings((prev) => prev.map((h) => {
-      if (missedIds.includes(h.bookingId)) return { ...h, status: 'Cancelled (driver did not park)' };
-      if (finishedIds.includes(h.bookingId)) return { ...h, status: 'Completed' };
-      return h;
-    }));
-    const freed = missed.reduce((acc, b) => ({ wash: acc.wash + (b.freeWash ? 1 : 0), ev: acc.ev + (b.freeEV ? 1 : 0) }), { wash: 0, ev: 0 });
-    if (freed.wash || freed.ev) setUsage((u) => ({ wash: u.wash - freed.wash, ev: u.ev - freed.ev }));
-    if (missed.length && activeRole === 'driver') showToast(`Booking at ${missed[0].spotName} was cancelled because you did not park. This is a violation. Please cancel bookings you don't need.`);
+
+    setUserBookings((prev) =>
+      prev.map((b) => {
+        if (missedIds.includes(b.id)) {
+          return {
+            ...b,
+            status: 'Cancelled',
+            violation: true,
+            violationAt: now,
+            cancelReason: 'You did not park during the booked slot. This counts as a violation.'
+          };
+        }
+        if (finishedIds.includes(b.id)) return { ...b, status: 'Completed' };
+        return b;
+      })
+    );
+
+    setHostBookings((prev) =>
+      prev.map((h) => {
+        if (missedIds.includes(h.bookingId)) return { ...h, status: 'Cancelled (driver did not park)' };
+        if (finishedIds.includes(h.bookingId)) return { ...h, status: 'Completed' };
+        return h;
+      })
+    );
+
+    const freed = missed.reduce(
+      (acc, b) => ({
+        wash: acc.wash + (b.freeWash ? 1 : 0),
+        ev: acc.ev + (b.freeEV ? 1 : 0)
+      }),
+      { wash: 0, ev: 0 }
+    );
+
+    if (freed.wash || freed.ev) {
+      setUsage((u) => ({ wash: u.wash - freed.wash, ev: u.ev - freed.ev }));
+    }
+
+    if (missed.length && activeRole === 'driver') {
+      showToast(
+        `Booking at ${missed[0].spotName} was cancelled because you did not park. This is a violation. Please cancel bookings you don't need.`
+      );
+    }
   }, [now, userBookings]);
 
   const violationInfo = getViolationStatus(userBookings, now);
   const holdUntilText = violationInfo.holdUntil
-    ? new Date(violationInfo.holdUntil).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+    ? new Date(violationInfo.holdUntil).toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      })
     : '';
 
   const confirmedBookings = userBookings
     .filter((b) => b.status === 'Confirmed')
     .sort((a, b) => toRange(a.date, a.startTime, a.hours)[0] - toRange(b.date, b.startTime, b.hours)[0]);
+
   const activeBooking = confirmedBookings.find((b) => toRange(b.date, b.startTime, b.hours)[1] > now);
   const activeSpot = activeBooking && spots.find((s) => s.name === activeBooking.spotName);
   const parkedNow = userBookings.find((b) => b.status === 'Parked');
@@ -165,9 +339,39 @@ export default function App() {
       showToast('Check-in is only available from 15 minutes before your slot until it ends.');
       return;
     }
-    setUserBookings((prev) => prev.map((x) => (x.id === id ? { ...x, status: 'Parked', parkedAt: Date.now() } : x)));
-    setHostBookings((prev) => prev.map((x) => (x.bookingId === id ? { ...x, status: 'Active (Parked Now)' } : x)));
+    setUserBookings((prev) =>
+      prev.map((x) => (x.id === id ? { ...x, status: 'Parked', parkedAt: Date.now() } : x))
+    );
+    setHostBookings((prev) =>
+      prev.map((x) => (x.bookingId === id ? { ...x, status: 'Active (Parked Now)' } : x))
+    );
     showToast(`Parked at ${b.spotName}. Enjoy your stay!`);
+  };
+
+  const handleCompleteSlot = (id) => {
+    const booking = userBookings.find((b) => b.id === id);
+    if (!booking) return;
+    if (booking.status !== 'Parked') {
+      showToast('You can complete the slot only after you have parked.');
+      return;
+    }
+
+    const completedAt = Date.now();
+
+    setUserBookings((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, status: 'Completed', completedAt } : b))
+    );
+
+    setHostBookings((prev) =>
+      prev.map((h) =>
+        h.bookingId === id
+          ? { ...h, status: 'Completed', completedAt: new Date(completedAt).toISOString() }
+          : h
+      )
+    );
+
+    setFeedbackBookingId(id);
+    showToast('Slot completed. The full booking amount has been credited to the host.');
   };
 
   const calcTotal = (vehicleType, hours, addOnCost) => {
@@ -192,15 +396,30 @@ export default function App() {
       setUsage((u) => ({ wash: u.wash - (b.freeWash ? 1 : 0), ev: u.ev - (b.freeEV ? 1 : 0) }));
     }
     const cancellationReason = reason.trim() || 'Cancelled by you.';
-    setUserBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status: 'Cancelled', cancelReason: cancellationReason } : b)));
-    setHostBookings((prev) => prev.map((h) => (h.bookingId === id ? { ...h, status: 'Cancelled' } : h)));
+    setUserBookings((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, status: 'Cancelled', cancelReason: cancellationReason } : b))
+    );
+    setHostBookings((prev) =>
+      prev.map((h) => (h.bookingId === id ? { ...h, status: 'Cancelled' } : h))
+    );
     showToast('Booking cancelled.');
   };
 
   const handleFeedbackSubmit = ({ bookingId, rating, comment }) => {
     const booking = userBookings.find((b) => b.id === bookingId);
     if (!booking || booking.status !== 'Completed' || feedbacks.some((f) => f.bookingId === bookingId)) return;
-    setFeedbacks((previous) => [{ id: `fb-${Date.now()}`, bookingId, name: user.name, spotName: booking.spotName, rating, comment, date: todayStr() }, ...previous]);
+    setFeedbacks((previous) => [
+      {
+        id: `fb-${Date.now()}`,
+        bookingId,
+        name: user.name,
+        spotName: booking.spotName,
+        rating,
+        comment,
+        date: todayStr()
+      },
+      ...previous
+    ]);
     showToast('Thanks for sharing your parking experience!');
   };
 
@@ -208,7 +427,10 @@ export default function App() {
     const keepFreeEV = Boolean(needEV && booking.freeEV);
     const keepFreeWash = Boolean(needWash && booking.freeWash);
     const valetFee = needValet && valetKm ? valetFare(valetKm) : 0;
-    const addOnCost = (needEV && !keepFreeEV ? PRICES.ev : 0) + (needWash && !keepFreeWash ? washPrice(booking.vehicleType) : 0) + valetFee;
+    const addOnCost =
+      (needEV && !keepFreeEV ? PRICES.ev : 0) +
+      (needWash && !keepFreeWash ? washPrice(booking.vehicleType) : 0) +
+      valetFee;
     return { keepFreeEV, keepFreeWash, valetFee, addOnCost };
   };
 
@@ -218,13 +440,18 @@ export default function App() {
     return calcTotal(booking.vehicleType, draft.hours, addOnsFor(booking, draft).addOnCost);
   };
 
-  const handleModifyBooking = (id, { date, startTime, hours, needEV, needWash, needValet, valetPickup, valetKm }) => {
+  const handleModifyBooking = (
+    id,
+    { date, startTime, hours, needEV, needWash, needValet, valetPickup, valetKm }
+  ) => {
     if (hours < 1 || hours > 24) return;
     const booking = userBookings.find((b) => b.id === id);
     if (!booking) return;
+
     const updatedDate = date || booking.date;
     const updatedStartTime = startTime || booking.startTime;
     const [updatedStart, updatedEnd] = toRange(updatedDate, updatedStartTime, hours);
+
     if (updatedEnd <= Date.now()) {
       showToast('Choose a parking slot with time remaining.');
       return;
@@ -233,57 +460,104 @@ export default function App() {
       showToast('That duration overlaps another booking of yours. Choose a shorter time.');
       return;
     }
+
     const spot = spots.find((s) => s.name === booking.spotName);
-    if (!spot || getAvailability(spot, updatedDate, updatedStartTime, hours, userBookings.filter((b) => b.id !== id)).free === 0) {
+    if (
+      !spot ||
+      getAvailability(
+        spot,
+        updatedDate,
+        updatedStartTime,
+        hours,
+        userBookings.filter((b) => b.id !== id)
+      ).free === 0
+    ) {
       showToast('That parking time is no longer available. Please choose another slot.');
       return;
     }
+
     const isBike = booking.vehicleType === 'Bike';
     const rate = isBike ? 30 : 50;
     const evChargingEarning = needEV ? PRICES.ev : 0;
     const washEarning = needWash ? washPrice(booking.vehicleType) : 0;
-    const { keepFreeEV, keepFreeWash, valetFee, addOnCost } = addOnsFor(booking, { needEV, needWash, needValet, valetKm });
-    if ((booking.freeEV && !keepFreeEV) || (booking.freeWash && !keepFreeWash)) {
-      setUsage((u) => ({ wash: u.wash - (booking.freeWash && !keepFreeWash ? 1 : 0), ev: u.ev - (booking.freeEV && !keepFreeEV ? 1 : 0) }));
-    }
-    setUserBookings((prev) => prev.map((b) => (b.id === id ? {
-      ...b,
-      date: updatedDate,
-      startTime: updatedStartTime,
-      hours,
+    const { keepFreeEV, keepFreeWash, valetFee, addOnCost } = addOnsFor(booking, {
       needEV,
       needWash,
-      freeEV: Boolean(keepFreeEV),
-      freeWash: Boolean(keepFreeWash),
-      needValet: Boolean(needValet),
-      valetPickup: needValet ? valetPickup : '',
-      valetKm: needValet ? valetKm : 0,
-      valetFee,
-      addOnCost,
-      timeSlot: fmtSlot(updatedDate, updatedStartTime, hours),
-      totalPaid: calcTotal(b.vehicleType, hours, addOnCost)
-    } : b)));
-    setHostBookings((prev) => prev.map((h) => {
-      if (h.bookingId !== id) return h;
-      const parkingEarning = rate * hours;
-      return {
-        ...h,
-        hoursBooked: hours,
-        timestamp: new Date(updatedStart).toISOString(),
-        startAt: new Date(updatedStart).toISOString(),
-        endAt: new Date(updatedEnd).toISOString(),
-        parkingEarning,
-        evCharging: needEV,
-        evChargerType: needEV ? (spots.find((s) => s.name === booking.spotName)?.amenities.evChargerType || '') : '',
-        evChargingEarning,
-        washEarning,
-        hostEarning: parkingEarning + evChargingEarning + washEarning
-      };
-    }));
+      needValet,
+      valetKm
+    });
+
+    if ((booking.freeEV && !keepFreeEV) || (booking.freeWash && !keepFreeWash)) {
+      setUsage((u) => ({
+        wash: u.wash - (booking.freeWash && !keepFreeWash ? 1 : 0),
+        ev: u.ev - (booking.freeEV && !keepFreeEV ? 1 : 0)
+      }));
+    }
+
+    setUserBookings((prev) =>
+      prev.map((b) =>
+        b.id === id
+          ? {
+              ...b,
+              date: updatedDate,
+              startTime: updatedStartTime,
+              hours,
+              needEV,
+              needWash,
+              freeEV: Boolean(keepFreeEV),
+              freeWash: Boolean(keepFreeWash),
+              needValet: Boolean(needValet),
+              valetPickup: needValet ? valetPickup : '',
+              valetKm: needValet ? valetKm : 0,
+              valetFee,
+              addOnCost,
+              timeSlot: fmtSlot(updatedDate, updatedStartTime, hours),
+              totalPaid: calcTotal(b.vehicleType, hours, addOnCost)
+            }
+          : b
+      )
+    );
+
+    setHostBookings((prev) =>
+      prev.map((h) => {
+        if (h.bookingId !== id) return h;
+        const parkingEarning = rate * hours;
+        return {
+          ...h,
+          hoursBooked: hours,
+          timestamp: new Date(updatedStart).toISOString(),
+          startAt: new Date(updatedStart).toISOString(),
+          endAt: new Date(updatedEnd).toISOString(),
+          parkingEarning,
+          evCharging: needEV,
+          evChargerType: needEV
+            ? spots.find((s) => s.name === booking.spotName)?.amenities.evChargerType || ''
+            : '',
+          evChargingEarning,
+          washEarning,
+          hostEarning: parkingEarning + evChargingEarning + washEarning
+        };
+      })
+    );
+
     showToast('Booking updated.');
   };
 
-  const handleBookingConfirm = ({ grandTotal, addOnCost, needEV, needWash, needValet, valetPickup, valetKm, valetFee, freeEV, freeWash, date, startTime, hours: bookingHours }) => {
+  const handleBookingConfirm = ({
+    grandTotal,
+    addOnCost,
+    needEV,
+    needWash,
+    needValet,
+    valetPickup,
+    valetKm,
+    valetFee,
+    freeEV,
+    freeWash,
+    date,
+    startTime,
+    hours: bookingHours
+  }) => {
     if (violationInfo.holdUntil) {
       setBookingModalSpot(null);
       showToast(`Your account is on hold until ${holdUntilText}.`);
@@ -293,6 +567,7 @@ export default function App() {
       showToast('You already have a booking at that time. Pick another time.');
       return;
     }
+
     const [slotStart, slotEnd] = toRange(date, startTime, bookingHours);
     if (slotEnd <= Date.now()) {
       showToast('That parking slot has already ended. Choose a slot with time remaining.');
@@ -302,9 +577,11 @@ export default function App() {
       showToast('That parking slot is full. Please choose another available time.');
       return;
     }
+
     if (freeEV || freeWash) {
       setUsage((u) => ({ wash: u.wash + (freeWash ? 1 : 0), ev: u.ev + (freeEV ? 1 : 0) }));
     }
+
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
     const newId = `PS-BOOK-${Math.floor(1000 + Math.random() * 9000)}`;
 
@@ -335,7 +612,6 @@ export default function App() {
 
     setUserBookings([newBooking, ...userBookings]);
 
-    // Push into host telemetry
     const hostRate = selectedVehicle === 'Bike' ? 30 : 50;
     const parkingEarning = hostRate * bookingHours;
     const evChargingEarning = needEV ? 50 : 0;
@@ -358,8 +634,6 @@ export default function App() {
         evChargingEarning,
         washEarning,
         hostEarning: parkingEarning + evChargingEarning + washEarning,
-        // Keep the booking's scheduled slot distinct from when it was made.
-        // A future booking must never appear as an already-earned payment.
         status: 'Scheduled',
         timestamp: new Date(slotStart).toISOString(),
         startAt: new Date(slotStart).toISOString(),
@@ -374,6 +648,10 @@ export default function App() {
     setCurrentTab('bookings');
   };
 
+  const feedbackBooking = feedbackBookingId
+    ? userBookings.find((b) => b.id === feedbackBookingId)
+    : null;
+
   return (
     <div className="app-wrapper">
       <Navbar
@@ -382,37 +660,66 @@ export default function App() {
         user={user}
         bookingCount={userBookings.length}
         violationCount={violationInfo.count}
-        hostBookingCount={hostBookings.length}
-        onLogout={() => {
-          setCurrentTab('auth');
-          showToast('You have been logged out. Please log in again.');
-        }}
+        hostBookingCount={visibleHostBookings.length}
+        onLogout={onLogout}
       />
 
-      {toast && <div className="toast-banner">{toast}</div>}
-
       <main className="main-content">
-        {/* DRIVER FLOW: 1. Spots -> 2. Subscriptions -> 3. Captain Valet */}
+        {/* DRIVER FLOW */}
         {currentTab === 'find' && (
           <div>
             {parkedNow && (
-              <div style={{ background: '#eff6ff', border: '1px solid #93c5fd', borderRadius: 12, padding: '14px 18px', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <div
+                style={{
+                  background: '#eff6ff',
+                  border: '1px solid #93c5fd',
+                  borderRadius: 12,
+                  padding: '14px 18px',
+                  marginBottom: 20,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: 12,
+                  flexWrap: 'wrap'
+                }}
+              >
                 <div>
                   <strong>🅿️ Parked now: {parkedNow.spotName}</strong>
-                  <div style={{ fontSize: 13, color: '#475569' }}>{parkedNow.timeSlot} • {parkedNow.vehicle}</div>
+                  <div style={{ fontSize: 13, color: '#475569' }}>
+                    {parkedNow.timeSlot} • {parkedNow.vehicle}
+                  </div>
                 </div>
-                <button className="btn-primary" onClick={() => setCurrentTab('bookings')}>View booking</button>
+                <button className="btn-primary" onClick={() => setCurrentTab('bookings')}>
+                  View booking
+                </button>
               </div>
             )}
+
             {lastOutcome?.violation && (
-              <div style={{ background: '#fee2e2', border: '2px solid #dc2626', borderLeftWidth: 8, borderRadius: 12, padding: '14px 18px', marginBottom: 20, color: '#7f1d1d' }}>
-                <strong style={{ color: '#b91c1c', fontSize: 16 }}>⚠ Not parked: you booked {lastOutcome.spotName} but did not check in</strong>
-                <div style={{ fontSize: 13, marginTop: 2 }}>{lastOutcome.timeSlot} • The booking was cancelled automatically.</div>
+              <div
+                style={{
+                  background: '#fee2e2',
+                  border: '2px solid #dc2626',
+                  borderLeftWidth: 8,
+                  borderRadius: 12,
+                  padding: '14px 18px',
+                  marginBottom: 20,
+                  color: '#7f1d1d'
+                }}
+              >
+                <strong style={{ color: '#b91c1c', fontSize: 16 }}>
+                  ⚠ Not parked: you booked {lastOutcome.spotName} but did not check in
+                </strong>
+                <div style={{ fontSize: 13, marginTop: 2 }}>
+                  {lastOutcome.timeSlot} • The booking was cancelled automatically.
+                </div>
                 <div style={{ fontSize: 13, marginTop: 6 }}>
-                  Violations: <strong>{violationInfo.count} of {MAX_VIOLATIONS}</strong>. {MAX_VIOLATIONS} violations put your account on hold for 3 months. Cancel bookings you don't need instead of missing them.
+                  Violations: <strong>{violationInfo.count} of {MAX_VIOLATIONS}</strong>.{' '}
+                  {MAX_VIOLATIONS} violations put your account on hold for 3 months. Cancel bookings you don't need instead of missing them.
                 </div>
               </div>
             )}
+
             {lastOutcome && !lastOutcome.violation && (
               <div
                 style={{
@@ -425,33 +732,70 @@ export default function App() {
               >
                 {lastOutcome.status === 'Completed' ? (
                   <>
-                    <strong style={{ color: '#047857' }}>✓ Last completed parking: you checked in and completed this slot</strong>
-                    <div style={{ fontSize: 13, color: '#065f46' }}>{lastOutcome.spotName} • {lastOutcome.timeSlot} • Completed</div>
+                    <strong style={{ color: '#047857' }}>
+                      ✓ Last completed parking: you checked in and completed this slot
+                    </strong>
+                    <div style={{ fontSize: 13, color: '#065f46' }}>
+                      {lastOutcome.spotName} • {lastOutcome.timeSlot} • Completed
+                    </div>
                   </>
                 ) : (
                   <>
-                    <strong style={{ color: '#334155' }}>Booking cancelled: {lastOutcome.spotName}</strong>
-                    <div style={{ fontSize: 13, color: '#475569' }}>{lastOutcome.timeSlot} • {lastOutcome.cancelReason}</div>
+                    <strong style={{ color: '#334155' }}>
+                      Booking cancelled: {lastOutcome.spotName}
+                    </strong>
+                    <div style={{ fontSize: 13, color: '#475569' }}>
+                      {lastOutcome.timeSlot} • {lastOutcome.cancelReason}
+                    </div>
                   </>
                 )}
               </div>
             )}
+
             {violationInfo.holdUntil && (
-              <div style={{ background: '#fef2f2', border: '1px solid #f87171', borderRadius: 12, padding: '14px 18px', marginBottom: 20, color: '#991b1b' }}>
+              <div
+                style={{
+                  background: '#fef2f2',
+                  border: '1px solid #f87171',
+                  borderRadius: 12,
+                  padding: '14px 18px',
+                  marginBottom: 20,
+                  color: '#991b1b'
+                }}
+              >
                 <strong>Account on hold until {holdUntilText}.</strong> You missed {MAX_VIOLATIONS} booked slots, so new bookings are paused for 3 months.
               </div>
             )}
+
             {activeBooking && (
-              <div className="active-booking-banner" style={{ background: '#ecfdf5', border: '1px solid #6ee7b7', borderRadius: 12, padding: '14px 18px', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <div
+                className="active-booking-banner"
+                style={{
+                  background: '#ecfdf5',
+                  border: '1px solid #6ee7b7',
+                  borderRadius: 12,
+                  padding: '14px 18px',
+                  marginBottom: 20,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: 12,
+                  flexWrap: 'wrap'
+                }}
+              >
                 <div>
                   <strong>Your active booking: {activeBooking.spotName}</strong>
                   <div style={{ fontSize: 13, color: '#475569' }}>
-                    {activeSpot?.address && <>{activeSpot.address} • </>}{activeBooking.timeSlot} • {activeBooking.vehicle} • Entry OTP {activeBooking.otpCode}
+                    {activeSpot?.address && <>{activeSpot.address} • </>}
+                    {activeBooking.timeSlot} • {activeBooking.vehicle} • Entry OTP {activeBooking.otpCode}
                   </div>
                 </div>
-                <button className="btn-primary" onClick={() => setCurrentTab('bookings')}>View / Modify</button>
+                <button className="btn-primary" onClick={() => setCurrentTab('bookings')}>
+                  View / Modify
+                </button>
               </div>
             )}
+
             <FindParking
               spots={spots}
               userBookings={userBookings}
@@ -472,11 +816,7 @@ export default function App() {
               filterCovered={filterCovered}
               setFilterCovered={setFilterCovered}
               onBookSpot={handleOpenBooking}
-              onPromptBecomeHost={() => {
-                setActiveRole('host');
-                setCurrentTab('auth');
-                showToast('📝 Drivers require a dedicated host account. Please register.');
-              }}
+              onPromptBecomeHost={onBecomeHost}
             />
 
             <div className="flow-divider">
@@ -513,14 +853,16 @@ export default function App() {
         {currentTab === 'host-dashboard' && (
           <HostDashboard
             user={user}
-            hostBookings={hostBookings}
+            hostBookings={visibleHostBookings}
             hostSpots={hostSpots}
             setHostSpots={setHostSpots}
             withdrawals={hostWithdrawals}
-            onWithdraw={({ amount, upi, timestamp }) => setHostWithdrawals((previous) => [
-              { id: `PO-${Date.now()}`, amount, upi, timestamp },
-              ...previous
-            ])}
+            onWithdraw={({ amount, upi, timestamp }) =>
+              setHostWithdrawals((previous) => [
+                { id: `PO-${Date.now()}`, amount, upi, timestamp },
+                ...previous
+              ])
+            }
             showToast={showToast}
             setCurrentTab={setCurrentTab}
           />
@@ -532,7 +874,14 @@ export default function App() {
         )}
 
         {currentTab === 'services' && (
-          <ServicesView user={user} spots={spots} usage={usage} bookings={userBookings} now={now} setCurrentTab={setCurrentTab} />
+          <ServicesView
+            user={user}
+            spots={spots}
+            usage={usage}
+            bookings={userBookings}
+            now={now}
+            setCurrentTab={setCurrentTab}
+          />
         )}
 
         {currentTab === 'captain' && (
@@ -546,6 +895,7 @@ export default function App() {
             setCurrentTab={setCurrentTab}
             onCancel={handleCancelBooking}
             onCheckIn={handleCheckIn}
+            onCompleteSlot={handleCompleteSlot}
             violations={violationInfo}
             holdUntilText={holdUntilText}
             now={now}
@@ -561,7 +911,13 @@ export default function App() {
             user={user}
             isHost={activeRole === 'host'}
             feedbacks={[...feedbacks].sort((a, b) => b.date.localeCompare(a.date))}
-            eligibleBookings={activeRole === 'host' ? [] : userBookings.filter((b) => b.status === 'Completed' && !feedbacks.some((f) => f.bookingId === b.id))}
+            eligibleBookings={
+              activeRole === 'host'
+                ? []
+                : userBookings.filter(
+                    (b) => b.status === 'Completed' && !feedbacks.some((f) => f.bookingId === b.id)
+                  )
+            }
             onSubmit={handleFeedbackSubmit}
           />
         )}
@@ -570,16 +926,12 @@ export default function App() {
           <AccountView
             user={user}
             bookings={userBookings}
-            hostBookings={hostBookings}
+            hostBookings={visibleHostBookings}
             hostSpots={hostSpots}
             violations={violationInfo}
             holdUntilText={holdUntilText}
             setCurrentTab={setCurrentTab}
           />
-        )}
-
-        {currentTab === 'auth' && (
-          <AuthPortal user={user} profiles={{ driver: driverProfile, host: hostProfile }} setUser={setUser} setCurrentTab={setCurrentTab} showToast={showToast} />
         )}
       </main>
 
@@ -599,7 +951,21 @@ export default function App() {
         />
       )}
 
-      <Footer />
+      {/* FEEDBACK POPUP: appears in the center after a slot is completed */}
+      {feedbackBooking && (
+        <FeedbackModal
+          booking={feedbackBooking}
+          onSubmit={({ rating, comment }) => {
+            handleFeedbackSubmit({ bookingId: feedbackBooking.id, rating, comment });
+            setFeedbackBookingId(null);
+          }}
+          onClose={() => setFeedbackBookingId(null)}
+        />
+      )}
+
+      <Footer currentTab={currentTab} setCurrentTab={setCurrentTab} user={user} />
     </div>
   );
 }
+
+export default App;

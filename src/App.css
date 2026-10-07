@@ -121,3 +121,24 @@ body {
   padding: 4px 12px;
   border-radius: 20px;
 }
+.complete-slot-button {
+  margin-top: 12px;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  background-color: #16a34a;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.complete-slot-button:hover {
+  background-color: #15803d;
+  transform: translateY(-1px);
+}
+
+.complete-slot-button:active {
+  transform: translateY(0);
+}
