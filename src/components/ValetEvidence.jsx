@@ -1,5 +1,5 @@
 import React from "react";
-import { PICKUP_SHOTS, PARKING_SHOTS, STATUS_LABEL } from "../utils/valet";
+import { PICKUP_SHOTS, PARKING_SHOTS, STATUS_LABEL } from "../utils/Valet.js";
 import "./valet.css";
 
 const getPhotoSource = (photo) => {
