@@ -4,13 +4,21 @@
 
 export const DEMO_DRIVER_EMAIL = 'arjun@parksphere.io';
 export const DEMO_HOST_EMAIL = 'vikram@host.io';
+export const DEMO_CAPTAIN_EMAIL = 'ravi@captain.io';
+export const DEMO_CAPTAIN2_EMAIL = 'suresh@captain.io';
+
+export const ROLES = ['driver', 'host', 'captain'];
 
 export const DEMO_CREDENTIALS = {
   driver: { email: DEMO_DRIVER_EMAIL, password: 'arjun123' },
-  host: { email: DEMO_HOST_EMAIL, password: 'vikram123' }
+  host: { email: DEMO_HOST_EMAIL, password: 'vikram123' },
+  captain: { email: DEMO_CAPTAIN_EMAIL, password: 'ravi123' }
 };
 
 export const normalizeEmail = (email) => String(email || '').trim().toLowerCase();
+
+// "driver" | "host" | "captain" (anything unknown falls back to "driver")
+export const roleLabel = (role) => (ROLES.includes(role) ? role : 'driver');
 
 // Small synchronous string hash (cyrb53), salted with the email.
 function cyrb53(str, seed = 0) {
@@ -60,6 +68,32 @@ export const SEED_ACCOUNTS = [
       phone: '+91 99887 66554',
       companyName: 'Smart Bay Homes'
     }
+  },
+  {
+    role: 'captain',
+    email: DEMO_CAPTAIN_EMAIL,
+    passwordHash: hashPassword(DEMO_CAPTAIN_EMAIL, DEMO_CREDENTIALS.captain.password),
+    profile: {
+      name: 'Ravi Kumar',
+      email: DEMO_CAPTAIN_EMAIL,
+      role: 'captain',
+      phone: '+91 90000 00001',
+      serviceArea: 'Hyderabad',
+      available: true
+    }
+  },
+  {
+    role: 'captain',
+    email: DEMO_CAPTAIN2_EMAIL,
+    passwordHash: hashPassword(DEMO_CAPTAIN2_EMAIL, 'suresh123'),
+    profile: {
+      name: 'Suresh Reddy',
+      email: DEMO_CAPTAIN2_EMAIL,
+      role: 'captain',
+      phone: '+91 90000 00002',
+      serviceArea: 'Hyderabad',
+      available: true
+    }
   }
 ];
 
@@ -69,10 +103,10 @@ export function findAccount(accounts, role, email) {
 }
 
 export function authenticate(accounts, role, email, password) {
-  const roleLabel = role === 'host' ? 'host' : 'driver';
+  const label = roleLabel(role);
   const account = findAccount(accounts, role, email);
   if (!account) {
-    return { ok: false, error: `No ${roleLabel} account found with this email. Please sign up first.` };
+    return { ok: false, error: `No ${label} account found with this email. Please sign up first.` };
   }
   if (account.passwordHash !== hashPassword(email, password)) {
     return { ok: false, error: 'Incorrect password. Please try again.' };
@@ -81,16 +115,49 @@ export function authenticate(accounts, role, email, password) {
 }
 
 export function registerAccount(accounts, profile, password) {
-  const roleLabel = profile.role === 'host' ? 'host' : 'driver';
+  const label = roleLabel(profile.role);
   const email = normalizeEmail(profile.email);
   if (findAccount(accounts, profile.role, email)) {
-    return { ok: false, error: `A ${roleLabel} account with this email already exists. Please log in.` };
+    return { ok: false, error: `A ${label} account with this email already exists. Please log in.` };
   }
   const account = {
     role: profile.role,
     email,
     passwordHash: hashPassword(email, password),
-    profile: { ...profile, email }
+    // New captains start as available so they can be assigned straight away.
+    profile: { ...profile, email, ...(profile.role === 'captain' ? { available: true } : {}) }
   };
   return { ok: true, account, accounts: [...accounts, account] };
 }
+
+/* ------------------------------------------------------------------ */
+/*  Captains: the account list is the single source of truth           */
+/* ------------------------------------------------------------------ */
+
+// Shape used by valet.js (id = the captain's email, so a job always maps to a login).
+export const captainFromAccount = (account) => ({
+  id: normalizeEmail(account.email),
+  name: account.profile.name,
+  phone: account.profile.phone,
+  available: account.profile.available !== false
+});
+
+export const getCaptains = (accounts) =>
+  accounts.filter((a) => a.role === 'captain').map(captainFromAccount);
+
+export const setCaptainAvailability = (accounts, email, available) =>
+  accounts.map((a) =>
+    a.role === 'captain' && normalizeEmail(a.email) === normalizeEmail(email)
+      ? { ...a, profile: { ...a.profile, available } }
+      : a
+  );
+
+export const removeCaptainAccount = (accounts, email) =>
+  accounts.filter((a) => !(a.role === 'captain' && normalizeEmail(a.email) === normalizeEmail(email)));
+
+// Returns the list with any missing demo accounts added (existing ones are untouched).
+// Needed because browsers that already saved "ps_accounts" won't see the new captain demo logins.
+export const mergeSeedAccounts = (accounts) => {
+  const missing = SEED_ACCOUNTS.filter((s) => !findAccount(accounts, s.role, s.email));
+  return missing.length ? [...accounts, ...missing] : accounts;
+};
