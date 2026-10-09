@@ -10,7 +10,7 @@ import {
 
   acknowledgeParking,
 
-} from './utils/valet';
+} from './utils/Valet';
 
 import Navbar from './components/Navbar';
 
@@ -62,7 +62,7 @@ import { getViolationStatus, MAX_VIOLATIONS } from './utils/violations';
 
 import useLocalStorage from './utils/useLocalStorage';
 
-import { STATUS, createValetJob, updateJobInfo, raiseDispute } from './utils/valet';
+import { STATUS, createValetJob, updateJobInfo, raiseDispute } from './utils/Valet';
 
 import {
 
