@@ -1,13 +1,13 @@
 // Place at: src/components/HostValetManager.jsx
 import React, { useState } from 'react';
-import ValetEvidence from './ValetEvidence';
+import ValetEvidence from "./ValetEvidence";
 import {
   STATUS_LABEL,
   activeCount,
   assignCaptain,
   pickCaptain,
   resolveDispute
-} from '../utils/valet';
+} from '../utils/Valet';
 import './valet.css';
 
 const HostValetManager = ({

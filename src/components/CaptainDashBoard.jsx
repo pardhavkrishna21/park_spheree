@@ -52,7 +52,7 @@ import {
 
   completeJob,
 
-} from '../utils/valet';
+} from '../utils/Valet';
 
 
 

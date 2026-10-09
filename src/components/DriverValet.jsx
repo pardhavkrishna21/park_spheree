@@ -5,7 +5,7 @@
 
 import React, { useEffect, useState } from 'react';
 import ValetEvidence from './ValetEvidence';
-import { STATUS, STATUS_LABEL } from '../utils/valet';
+import { STATUS, STATUS_LABEL } from '../utils/Valet';
 import './valet.css';
 
 const DriverValet = ({
