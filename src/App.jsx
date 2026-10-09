@@ -40,7 +40,7 @@ import AuthPortal from './components/AuthPortal';
 
 import Footer from './components/Footer';
 
-import CaptainDashboard from './components/CaptainDashboard';
+import CaptainDashboard from './components/CaptainDashBoard';
 
 import CaptainProfile from './components/CaptainProfile';
 
